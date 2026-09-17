@@ -68,6 +68,11 @@ def _feature_lens_after_pooling(
     return after_pool.to(dtype=torch.int32)
 
 
+def _min_mel_frames(pool_step: int) -> int:
+    """Fewest mel frames the pooling stage accepts (one pooled frame)."""
+    return 2 * pool_step - 1
+
+
 class MiniCPMWhisperEncoderAttention(nn.Module):
     """Whisper encoder self-attention with a fused qkv projection and an
     additive SDPA mask (the chunked-causal + padding mask)."""
@@ -298,6 +303,19 @@ class MiniCPMOAudioEncoder(nn.Module):
         wavforms = audio_features.to(self._device, dtype=self._dtype)
         lens_cpu = audio_feature_lens.to("cpu")
         lens = audio_feature_lens.to(self._device)
+
+        # Pooling rounds down to a whole window, so a clip with fewer mel
+        # frames than one window yields no frames at all and ``AvgPool1d``
+        # raises an opaque size error. Reject it here, where the frame counts
+        # are known.
+        min_mel_frames = _min_mel_frames(self.audio_pool_step)
+        if int(lens_cpu.min()) < min_mel_frames:
+            shortest = int(lens_cpu.min())
+            raise ValueError(
+                f"MiniCPM-o accepts audio up to {min_mel_frames} mel frames "
+                f"minimum, but the shortest segment has only {shortest}; "
+                "send a longer clip"
+            )
 
         _, _, max_mel_seq_len = wavforms.shape
         max_seq_len = (max_mel_seq_len - 1) // 2 + 1

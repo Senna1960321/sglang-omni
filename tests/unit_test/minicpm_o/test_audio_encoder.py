@@ -25,6 +25,7 @@ from sglang_omni.models.minicpm_o.components.audio_encoder import (
     _chunked_causal_mask,
     _feature_lens_after_pooling,
     _fuse_qkv,
+    _min_mel_frames,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -227,3 +228,35 @@ def test_projector_shapes() -> None:
     projector = MultiModalProjector(in_dim=64, out_dim=96)
     out = projector(torch.randn(2, 10, 64))
     assert out.shape == (2, 10, 96)
+
+
+@pytest.mark.parametrize("pool_step", [2, 3, 5])
+def test_short_audio_is_rejected_before_pooling(pool_step: int) -> None:
+    """A clip too short for one pooling window must raise a typed error.
+
+    ``AvgPool1d`` returns an empty tensor when the post-conv length is below
+    ``pool_step``, and the caller then fails on an empty embedding. The guard
+    turns that into a ``ValueError`` the server can classify as a bad request.
+    """
+    encoder = _tiny_audio_encoder(pool_step=pool_step)
+    too_short = _min_mel_frames(pool_step) - 1
+    mel = torch.randn(1, 80, too_short).to(encoder._dtype)
+    lens = torch.tensor([too_short])
+
+    with pytest.raises(ValueError, match="accepts audio up to"):
+        with torch.no_grad():
+            encoder(audio_features=mel, audio_feature_lens=lens)
+
+
+@pytest.mark.parametrize("pool_step", [2, 3, 5])
+def test_minimum_length_audio_still_encodes(pool_step: int) -> None:
+    """The shortest accepted clip yields exactly one pooled frame."""
+    encoder = _tiny_audio_encoder(pool_step=pool_step)
+    shortest = _min_mel_frames(pool_step)
+    mel = torch.randn(1, 80, shortest).to(encoder._dtype)
+    lens = torch.tensor([shortest])
+
+    with torch.no_grad():
+        out = encoder(audio_features=mel, audio_feature_lens=lens)
+
+    assert out["audio_embeds"].shape[0] == 1
