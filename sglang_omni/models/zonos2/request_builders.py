@@ -12,7 +12,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import torch
 
@@ -143,12 +143,14 @@ class Zonos2SGLangRequestData(SGLangARRequestData):
     _stream_emit_idx: int = 0
 
 
-def build_zonos2_stream_metadata(payload: StagePayload, *, n_codebooks: int):
+def build_zonos2_stream_metadata(
+    payload: StagePayload, *, n_codebooks: int
+) -> dict[str, Literal["audio_codes", True] | int] | None:
     """Per-frame stream-chunk metadata, or None when the request is not streaming."""
     params = payload.request.params
     if not isinstance(params, dict) or not params.get("stream"):
         return None
-    metadata = {
+    metadata: dict[str, Literal["audio_codes", True] | int] = {
         "stream": True,
         "modality": "audio_codes",
         "n_codebooks": int(n_codebooks),
