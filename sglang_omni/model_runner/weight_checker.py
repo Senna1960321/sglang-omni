@@ -6,8 +6,15 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
+
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torch.nn import Module
+
+    from sglang_omni.model_runner.sglang_model_runner import SGLModelRunner
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +61,7 @@ class TensorDigest:
 class StrictWeightChecker:
     """Compute strict per-tensor and aggregate SHA256 digests."""
 
-    def __init__(self, model_runner: object) -> None:
+    def __init__(self, model_runner: "SGLModelRunner") -> None:
         self._model_runner = model_runner
         self._snapshot: dict[str, TensorDigest] | None = None
 
@@ -129,7 +136,7 @@ class StrictWeightChecker:
         return digests
 
     @staticmethod
-    def _iter_named_tensors(model: object):
+    def _iter_named_tensors(model: "Module") -> Iterator[tuple[str, "Tensor"]]:
         seen: set[int] = set()
         named_parameters = getattr(model, "named_parameters", None)
         if callable(named_parameters):
@@ -170,7 +177,7 @@ class StrictWeightChecker:
         }
 
 
-def _digest_tensor(name: str, tensor: Any) -> TensorDigest:
+def _digest_tensor(name: str, tensor: "Tensor") -> TensorDigest:
     detached = tensor.detach() if hasattr(tensor, "detach") else tensor
     contiguous = detached.contiguous() if hasattr(detached, "contiguous") else detached
     cpu = contiguous.cpu() if hasattr(contiguous, "cpu") else contiguous
@@ -184,7 +191,7 @@ def _digest_tensor(name: str, tensor: Any) -> TensorDigest:
     return TensorDigest(name=name, shape=shape, dtype=dtype, sha256=h.hexdigest())
 
 
-def _tensor_bytes(tensor: Any) -> bytes:
+def _tensor_bytes(tensor: "Tensor") -> bytes:
     numpy = getattr(tensor, "numpy", None)
     if callable(numpy):
         try:
