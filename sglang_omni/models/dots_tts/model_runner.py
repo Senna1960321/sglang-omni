@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.managers.schedule_batch import FINISH_MATCHED_TOKEN
@@ -39,7 +39,7 @@ class _DotsFlowLaunchBuf:
     batched: bool
 
 
-class DotsTTSModelRunner(ModelRunner):
+class DotsTTSModelRunner(ModelRunner["DotsTTSSGLangRequestData"]):
     """Use the shared SGLang forward path and own only latent recurrence."""
 
     model: DotsTTSSGLangModel
@@ -337,7 +337,9 @@ class DotsTTSModelRunner(ModelRunner):
             raise RuntimeError("dots.tts SGLang forward did not return hidden states")
         return hidden
 
-    def on_request_finished(self, request_id: str, req_data: Any) -> None:
+    def on_request_finished(
+        self, request_id: str, req_data: "DotsTTSSGLangRequestData"
+    ) -> None:
         self._request_data.pop(request_id, None)
         self._clear_request_data(req_data)
 

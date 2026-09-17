@@ -42,7 +42,7 @@ def _rvq_graph_buckets(max_running_requests: int) -> list[int]:
     return buckets
 
 
-class MiniMaxMusic3EngineBuilder(TtsEngineBuilder):
+class MiniMaxMusic3EngineBuilder(TtsEngineBuilder["MiniMaxMusic3SGLangRequestData"]):
     model_name = "minimax_music3"
     context_length = 10240
     model_arch_override = "Qwen3ForCausalLM"

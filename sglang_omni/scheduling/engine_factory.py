@@ -7,7 +7,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from numbers import Integral
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
 from sglang.srt.arg_groups.model_override_base import resolved_view
 
@@ -19,7 +19,7 @@ from sglang_omni.scheduling.generation_batch_policy import (
     operator_selected_prefill_backend,
     validate_generation_batch_policy,
 )
-from sglang_omni.scheduling.types import ARRequestData, DeferredAdmission
+from sglang_omni.scheduling.types import DeferredAdmission, RequestDataT
 from sglang_omni.utils.checkpoint import resolve_checkpoint as _resolve_checkpoint
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ def _normalize_context_length(value: object, *, model_name: str) -> int:
     return context_length
 
 
-class SGLangGenerationEngineBuilder(ABC):
+class SGLangGenerationEngineBuilder(ABC, Generic[RequestDataT]):
     """Build the model-neutral parts of a SGLang AR engine stage.
 
     Model-specific builders provide checkpoint preprocessing, model setup,
@@ -81,7 +81,7 @@ class SGLangGenerationEngineBuilder(ABC):
         gpu_id: int | None = None,
         dtype: str = "bfloat16",
         server_args_overrides: dict[str, Any] | None = None,
-    ) -> OmniScheduler:
+    ) -> "OmniScheduler[RequestDataT]":
         from sglang_omni.platforms import current_platform
         from sglang_omni.scheduling import bootstrap as scheduling_bootstrap
         from sglang_omni.scheduling import sglang_backend
@@ -352,13 +352,13 @@ class SGLangGenerationEngineBuilder(ABC):
         self,
         model_worker: ModelWorker | MlxTpModelWorker,
         output_proc: SGLangOutputProcessor,
-    ) -> ModelRunner:
+    ) -> "ModelRunner[RequestDataT]":
         raise NotImplementedError
 
     @abstractmethod
     def make_adapters(
         self, model: Any
-    ) -> tuple[Callable[[StagePayload], ARRequestData | DeferredAdmission] | None, Any]:
+    ) -> tuple[Callable[[StagePayload], RequestDataT | DeferredAdmission] | None, Any]:
         raise NotImplementedError
 
     def _build_runtime(
@@ -372,7 +372,7 @@ class SGLangGenerationEngineBuilder(ABC):
         token_to_kv_pool_allocator: BaseTokenToKVPoolAllocator,
         server_args: ServerArgs,
         model_config: ModelConfig,
-    ) -> tuple[OmniScheduler, ModelRunner]:
+    ) -> tuple["OmniScheduler[RequestDataT]", "ModelRunner[RequestDataT]"]:
         request_builder, result_adapter = self.make_adapters(model)
         scheduler_kwargs = self.extra_scheduler_kwargs()
         model_runner = self.make_model_runner(model_worker, output_proc)
@@ -414,13 +414,13 @@ class SGLangGenerationEngineBuilder(ABC):
         token_to_kv_pool_allocator: BaseTokenToKVPoolAllocator,
         server_args: ServerArgs,
         model_config: ModelConfig,
-        model_runner: ModelRunner,
+        model_runner: "ModelRunner[RequestDataT]",
         request_builder: (
-            Callable[[StagePayload], ARRequestData | DeferredAdmission] | None
+            Callable[[StagePayload], RequestDataT | DeferredAdmission] | None
         ),
         result_adapter: Callable[[ResultRequestT], object] | None,
         extra_scheduler_kwargs: dict[str, SchedulerKwargT],
-    ) -> OmniScheduler:
+    ) -> "OmniScheduler[RequestDataT]":
         from sglang_omni.scheduling import omni_scheduler
 
         scheduler_kwargs = {
@@ -441,12 +441,14 @@ class SGLangGenerationEngineBuilder(ABC):
         return omni_scheduler.OmniScheduler(**scheduler_kwargs)
 
     def post_scheduler_setup(
-        self, scheduler: OmniScheduler, model_runner: ModelRunner
+        self,
+        scheduler: "OmniScheduler[RequestDataT]",
+        model_runner: "ModelRunner[RequestDataT]",
     ) -> None:
         del scheduler, model_runner
 
 
-class AsrEngineBuilder(SGLangGenerationEngineBuilder):
+class AsrEngineBuilder(SGLangGenerationEngineBuilder[RequestDataT]):
     """Shared lifecycle policy for SGLang-backed ASR stages."""
 
     def resolve_checkpoint(self, model_path: str) -> str:
@@ -464,13 +466,13 @@ class AsrEngineBuilder(SGLangGenerationEngineBuilder):
         self,
         model_worker: ModelWorker | MlxTpModelWorker,
         output_proc: SGLangOutputProcessor,
-    ) -> ModelRunner:
+    ) -> "ModelRunner[RequestDataT]":
         from sglang_omni.model_runner.base import ModelRunner
 
         return ModelRunner(model_worker, output_proc)
 
 
-class TtsEngineBuilder(SGLangGenerationEngineBuilder):
+class TtsEngineBuilder(SGLangGenerationEngineBuilder[RequestDataT]):
     """Compatibility builder preserving the historical TTS contract."""
 
     @abstractmethod
@@ -490,7 +492,7 @@ class TtsEngineBuilder(SGLangGenerationEngineBuilder):
         self,
         model_worker: ModelWorker | MlxTpModelWorker,
         output_proc: SGLangOutputProcessor,
-    ) -> ModelRunner:
+    ) -> "ModelRunner[RequestDataT]":
         raise NotImplementedError
 
     def resolve_checkpoint(self, model_path: str) -> str:
@@ -515,12 +517,12 @@ class TtsEngineBuilder(SGLangGenerationEngineBuilder):
         token_to_kv_pool_allocator: BaseTokenToKVPoolAllocator,
         server_args: ServerArgs,
         model_config: ModelConfig,
-        model_runner: ModelRunner,
+        model_runner: "ModelRunner[RequestDataT]",
         request_builder: (
-            Callable[[StagePayload], ARRequestData | DeferredAdmission] | None
+            Callable[[StagePayload], RequestDataT | DeferredAdmission] | None
         ),
         result_adapter: Callable[[ResultRequestT], object] | None,
-    ) -> OmniScheduler:
+    ) -> "OmniScheduler[RequestDataT]":
         return self._make_scheduler(
             model_worker=model_worker,
             tree_cache=tree_cache,
@@ -545,7 +547,7 @@ class TtsEngineBuilder(SGLangGenerationEngineBuilder):
         token_to_kv_pool_allocator: BaseTokenToKVPoolAllocator,
         server_args: ServerArgs,
         model_config: ModelConfig,
-    ) -> tuple[OmniScheduler, ModelRunner]:
+    ) -> tuple["OmniScheduler[RequestDataT]", "ModelRunner[RequestDataT]"]:
         model_runner = self.make_model_runner(model_worker, output_proc)
         request_builder, result_adapter = self.make_adapters(model)
         scheduler = self.make_scheduler(

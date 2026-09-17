@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     )
     from sglang_omni.models.qwen3_omni.talker_scheduler import QwenTalkerScheduler
     from sglang_omni.scheduling.omni_scheduler import OmniScheduler
+    from sglang_omni.scheduling.sglang_backend.request_data import SGLangARRequestData
     from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
     from sglang_omni.scheduling.threaded_simple_scheduler import ThreadedSimpleScheduler
 
@@ -1089,7 +1090,7 @@ def create_sglang_thinker_executor_from_config(
     prefill_coalesce_requests: int = 0,
     prefill_coalesce_wait_ms: float = 60.0,
     prefill_coalesce_when_idle: bool = False,
-) -> OmniScheduler:
+) -> "OmniScheduler[SGLangARRequestData]":
     """Returns OmniScheduler for thinker."""
     from sglang_omni.scheduling.sglang_backend import pin_resolved_device_type
     from sglang_omni.utils.device import resolve_concrete_device

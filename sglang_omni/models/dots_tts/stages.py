@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from dots_tts.models.dots_tts.config import ModelConfig
     from transformers import PreTrainedTokenizerBase
 
+    from sglang_omni.models.dots_tts.request_builders import DotsTTSSGLangRequestData
+
 _DEFAULT_CONTEXT_LENGTH = 2048
 
 ValueT = TypeVar("ValueT")
@@ -440,7 +442,7 @@ def create_sglang_latent_engine_executor(
     device: str | None = None,
     gpu_id: int | None = None,
     server_args_overrides: dict[str, Any] | None = None,
-) -> OmniScheduler:
+) -> "OmniScheduler[DotsTTSSGLangRequestData]":
     from sglang_omni.models.dots_tts.engine_builder import DotsTTSEngineBuilder
 
     if not torch.cuda.is_available():

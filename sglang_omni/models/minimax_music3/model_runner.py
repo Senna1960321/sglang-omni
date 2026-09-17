@@ -8,7 +8,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -30,12 +30,13 @@ if TYPE_CHECKING:
     from sglang.srt.models.qwen3 import Qwen3ForCausalLM
 
     from sglang_omni.model_runner.model_worker import ModelWorker
+    from sglang_omni.models.minimax_music3.sglang_request_builder import (
+        MiniMaxMusic3SGLangRequestData,
+    )
     from sglang_omni.scheduling.sglang_backend.output_processor import (
         SGLangOutputProcessor,
     )
     from sglang_omni.scheduling.types import SchedulerRequest
-
-    from .sglang_request_builder import MiniMaxMusic3SGLangRequestData
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class MiniMaxMusic3ARState:
     )
 
 
-class MiniMaxMusic3ModelRunner(ModelRunner):
+class MiniMaxMusic3ModelRunner(ModelRunner["MiniMaxMusic3SGLangRequestData"]):
     """Own c0 sampling, RVQ depth decode and FM8 chunk streaming."""
 
     model: "Qwen3ForCausalLM"
@@ -210,7 +211,9 @@ class MiniMaxMusic3ModelRunner(ModelRunner):
             return
         self._advance(result, requests, emit=True)
 
-    def on_request_finished(self, request_id: str, req_data: Any) -> None:
+    def on_request_finished(
+        self, request_id: str, req_data: "MiniMaxMusic3SGLangRequestData"
+    ) -> None:
         ar_state: MiniMaxMusic3ARState | None = req_data.ar_state
         self._request_data.pop(request_id, None)
         if ar_state is None:

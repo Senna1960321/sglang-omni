@@ -63,7 +63,7 @@ def configure_talker_server_args(
     return want_cuda_graph
 
 
-class QwenTalkerScheduler(OmniScheduler):
+class QwenTalkerScheduler(OmniScheduler["SGLangARRequestData"]):
     """Talker scheduler with Qwen-specific request and decode readiness."""
 
     # Note (wenyao): Callers that construct schedulers without __init__ still

@@ -10,9 +10,10 @@ from __future__ import annotations
 from collections import Counter
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 import torch
+from typing_extensions import TypeVar
 
 from sglang_omni.model_runner.prefill_inputs import clear_omni_prefill_inputs
 from sglang_omni.platforms import current_platform
@@ -119,7 +120,15 @@ class _PendingStep:
     )
 
 
-class ModelRunner:
+FinishedRequestDataT = TypeVar(
+    "FinishedRequestDataT",
+    bound=ARRequestData,
+    default=ARRequestData,
+    contravariant=True,
+)
+
+
+class ModelRunner(Generic[FinishedRequestDataT]):
     """Base AR model runner.
 
     Subclasses provide phase-specific behavior:
@@ -823,7 +832,9 @@ class ModelRunner:
     ) -> None:
         """Called after output tokens are materialized into RequestOutput."""
 
-    def on_request_finished(self, request_id: str, req_data: ARRequestData) -> None:
+    def on_request_finished(
+        self, request_id: str, req_data: FinishedRequestDataT
+    ) -> None:
         """Drain per-request state on any non-abort finish.
 
         Called from ``OmniScheduler.stream_output`` before the terminal payload

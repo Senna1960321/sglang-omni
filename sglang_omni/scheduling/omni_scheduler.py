@@ -23,7 +23,7 @@ from collections import deque
 from collections.abc import Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from itertools import islice
-from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypedDict, TypeVar
 
 import torch
 from sglang.srt.environ import envs
@@ -68,6 +68,7 @@ from sglang_omni.scheduling.types import (
     ARRequestData,
     DeferredAdmission,
     ModelRunnerOutput,
+    RequestDataT,
     SchedulerOutput,
 )
 
@@ -143,10 +144,10 @@ class _NoOpSender:
         pass
 
 
-class _UpstreamAbortSender:
+class _UpstreamAbortSender(Generic[RequestDataT]):
     """Translate upstream scheduler abort notifications into stage output."""
 
-    def __init__(self, scheduler: OmniScheduler) -> None:
+    def __init__(self, scheduler: "OmniScheduler[RequestDataT]") -> None:
         self._scheduler = scheduler
 
     def send_output(self, msg: object, req: object = None) -> None:
@@ -171,10 +172,10 @@ class _UpstreamAbortSender:
         scheduler.abort(request_id, defer_running_cleanup=False)
 
 
-class _OmniIpcChannels:
+class _OmniIpcChannels(Generic[RequestDataT]):
     """Subset of upstream SchedulerIpcChannels reachable from Omni."""
 
-    def __init__(self, scheduler: OmniScheduler) -> None:
+    def __init__(self, scheduler: "OmniScheduler[RequestDataT]") -> None:
         self.send_to_tokenizer = _UpstreamAbortSender(scheduler)
         self.send_to_detokenizer = scheduler.send_to_detokenizer
 
@@ -200,7 +201,7 @@ class _NoOpGrammarManager:
         return 0
 
 
-class OmniScheduler:
+class OmniScheduler(Generic[RequestDataT]):
     """Stage-facing scheduler for AR stages.
 
     Public contract (used by Stage):
@@ -224,9 +225,9 @@ class OmniScheduler:
         server_args: ServerArgs,
         model_config: ModelConfig,
         *,
-        model_runner: ModelRunner | None = None,
+        model_runner: "ModelRunner[RequestDataT] | None" = None,
         request_builder: (
-            Callable[[StagePayload], ARRequestData | DeferredAdmission] | None
+            Callable[[StagePayload], RequestDataT | DeferredAdmission] | None
         ) = None,
         result_adapter: Callable | None = None,
         stream_output_builder: Callable | None = None,
@@ -253,7 +254,7 @@ class OmniScheduler:
         # --- Request builder: StagePayload → SGLangARRequestData ----------
         self._request_builder = request_builder
         self._result_adapter = result_adapter
-        self._model_runner = None
+        self._model_runner: "ModelRunner[RequestDataT] | None" = None
         self._stream_output_builder = stream_output_builder
         self._stream_chunk_handler = stream_chunk_handler
         self._stream_done_handler = stream_done_handler
@@ -297,7 +298,7 @@ class OmniScheduler:
             self._request_build_backlog_limit = 0
             self._request_build_executor = None
         self._pending_request_builds: dict[
-            str, tuple[StagePayload, bool, Future[ARRequestData | DeferredAdmission]]
+            str, tuple[StagePayload, bool, Future[RequestDataT | DeferredAdmission]]
         ] = {}
         self._pending_request_admissions: dict[
             str, tuple[StagePayload, bool, DeferredAdmission]
@@ -538,7 +539,7 @@ class OmniScheduler:
         self.send_to_detokenizer = _NoOpSender()
 
         self._init_parallel_state(tp_worker)
-        self.ipc_channels = _OmniIpcChannels(self)
+        self.ipc_channels: _OmniIpcChannels[RequestDataT] = _OmniIpcChannels(self)
         self.init_metrics_collector(self.tp_rank, self.pp_rank, self.dp_rank)
         self.init_metrics_reporter(self.tp_rank, self.pp_rank, self.dp_rank)
         self._init_upstream_scheduler_components()
@@ -564,7 +565,7 @@ class OmniScheduler:
 
         return DisaggregationMode.NULL
 
-    def bind_model_runner(self, model_runner: ModelRunner) -> None:
+    def bind_model_runner(self, model_runner: "ModelRunner[RequestDataT]") -> None:
         """Attach a custom runner and its SGLang execution-contract bridge.
 
         Some pipelines need the scheduler-owned outbox before they can build
@@ -996,7 +997,7 @@ class OmniScheduler:
 
     def _run_request_builder(
         self, payload: StagePayload, active_stage: str | None
-    ) -> ARRequestData | DeferredAdmission:
+    ) -> RequestDataT | DeferredAdmission:
         req_id = payload.request_id
         _emit_event(
             request_id=req_id,
@@ -1165,7 +1166,7 @@ class OmniScheduler:
         self,
         payload: StagePayload,
         pending_stream_done: bool,
-        result: ARRequestData | DeferredAdmission,
+        result: RequestDataT | DeferredAdmission,
         *,
         request_admission_lock_held: bool = False,
     ) -> None:
@@ -1236,7 +1237,7 @@ class OmniScheduler:
         self,
         payload: StagePayload,
         pending_stream_done: bool,
-        req_data: Any,
+        req_data: RequestDataT,
         *,
         request_admission_lock_held: bool = False,
     ) -> None:
@@ -2766,7 +2767,7 @@ class OmniScheduler:
         self._prefill_end_done.discard(request_id)
         return abort_cleanup_needed
 
-    def _find_request_data(self, request_id: str) -> ARRequestData | None:
+    def _find_request_data(self, request_id: str) -> RequestDataT | None:
         # Scan all batches a live req can sit in during prefill→decode handoff.
         for batch in (
             self.running_batch,

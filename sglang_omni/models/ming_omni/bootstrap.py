@@ -38,7 +38,7 @@ def create_thinker_scheduler(
     tp_size: int = 1,
     nccl_port: int | None = None,
     enable_streaming_tts: bool = False,
-) -> "OmniScheduler":
+) -> "OmniScheduler[SGLangARRequestData]":
     if tp_size < 1:
         raise ValueError(f"tp_size must be >= 1, got {tp_size}")
     if resolved_view(server_args).tp_size != tp_size:

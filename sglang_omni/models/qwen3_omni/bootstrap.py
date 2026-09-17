@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from sglang_omni.models.qwen3_omni.talker_scheduler import QwenTalkerScheduler
     from sglang_omni.scheduling.omni_scheduler import OmniScheduler
+    from sglang_omni.scheduling.sglang_backend.request_data import SGLangARRequestData
     from sglang_omni.scheduling.types import SchedulerRequest
 
 
@@ -27,7 +28,7 @@ def create_thinker_scheduler(
     prefill_coalesce_wait_ms: float = 60.0,
     prefill_coalesce_when_idle: bool = False,
     operator_selected_prefill_backend: bool = False,
-) -> "OmniScheduler":
+) -> "OmniScheduler[SGLangARRequestData]":
     """Create the Qwen thinker scheduler."""
     from sglang.srt.arg_groups.model_override_base import resolved_view
     from sglang.srt.utils.hf_transformers_utils import get_tokenizer

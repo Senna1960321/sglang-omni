@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import TypeVar
+
 if TYPE_CHECKING:
     import torch
 
@@ -89,6 +91,9 @@ class ARRequestData:
     # compacts the history of every request it retracts, whatever the model.
     prefill_input_embeds: "torch.Tensor | None" = None
     decode_input_embeds: list["torch.Tensor"] | None = field(default_factory=list)
+
+
+RequestDataT = TypeVar("RequestDataT", bound=ARRequestData, default=ARRequestData)
 
 
 def sampled_logprobs_to_list(next_token_logprobs: Any) -> list[float] | None:

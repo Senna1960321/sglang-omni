@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import torch
 
@@ -41,7 +41,7 @@ TalkerInputQueue: TypeAlias = (
 )
 
 
-class QwenTalkerModelRunner(ModelRunner):
+class QwenTalkerModelRunner(ModelRunner["SGLangARRequestData"]):
     model: Qwen3OmniTalker
 
     def __init__(
@@ -238,7 +238,9 @@ class QwenTalkerModelRunner(ModelRunner):
             )
         )
 
-    def on_request_finished(self, request_id: str, req_data: Any) -> None:
+    def on_request_finished(
+        self, request_id: str, req_data: "SGLangARRequestData"
+    ) -> None:
         pending = req_data.pending_codec_rows
         if not pending:
             return

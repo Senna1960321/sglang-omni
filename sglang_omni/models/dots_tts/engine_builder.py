@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class DotsTTSEngineBuilder(TtsEngineBuilder):
+class DotsTTSEngineBuilder(TtsEngineBuilder["DotsTTSSGLangRequestData"]):
     model_name = "dots.tts"
     context_length = 2048
 

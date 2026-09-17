@@ -16,7 +16,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.omni_scheduler import OmniScheduler
 
 
-class MiniMaxMusic3Scheduler(OmniScheduler):
+class MiniMaxMusic3Scheduler(OmniScheduler["MiniMaxMusic3SGLangRequestData"]):
     """Admit, decode and retire every request as a CFG row pair."""
 
     def _enqueue_built_request(
