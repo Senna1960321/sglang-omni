@@ -27,6 +27,7 @@ from sglang_omni.utils.gpu_compat import get_visible_gpu_sm_version
 
 if TYPE_CHECKING:
     from sglang.srt.server_args import ServerArgs
+    from transformers import PreTrainedTokenizerBase
 
     from sglang_omni.models.fun_asr.configuration_fun_asr import (
         FunAsrNanoFeatureExtractor,
@@ -98,7 +99,7 @@ class FunASREngineBuilder(AsrEngineBuilder):
         self.request_build_max_workers = request_build_max_workers
         self.request_build_max_pending = request_build_max_pending
         self.stream_emit_interval_s = stream_emit_interval_s
-        self.tokenizer: Any = None
+        self.tokenizer: "PreTrainedTokenizerBase | None" = None
         self.feature_extractor: "FunAsrNanoFeatureExtractor | None" = None
         self.audio_encoder_service: FunASRPreLMEncoderService | None = None
         self.context_length = 0

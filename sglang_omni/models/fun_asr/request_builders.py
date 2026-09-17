@@ -8,7 +8,7 @@ import time
 from collections.abc import Sized
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Any, Callable, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
 
 import torch
 from sglang.srt.managers.schedule_batch import (
@@ -30,6 +30,14 @@ from sglang_omni.scheduling.types import RequestOutput
 
 from .configuration_fun_asr import AUDIO_PLACEHOLDER_TOKEN as _AUDIO_PAD
 from .tool_funcs.audio_lengths import fun_asr_low_frame_rate_length
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+
+    from sglang_omni.models.fun_asr.configuration_fun_asr import (
+        FunAsrNanoFeatureExtractor,
+    )
+    from sglang_omni.models.fun_asr.encoder_service import FunASRPreLMEncoderService
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +100,10 @@ def _request_token_budget(
 
 
 def _decode_token_ids(
-    tokenizer: Any, token_ids: list[int], *, skip_special_tokens: bool
+    tokenizer: "PreTrainedTokenizerBase",
+    token_ids: list[int],
+    *,
+    skip_special_tokens: bool,
 ) -> str:
     try:
         return tokenizer.decode(
@@ -167,11 +178,11 @@ def fun_asr_prompt_overhead_tokens(
 
 def make_fun_asr_scheduler_adapters(
     *,
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     max_new_tokens: int,
-    feature_extractor: Any = None,
+    feature_extractor: "FunAsrNanoFeatureExtractor | None" = None,
     context_length: int | None = None,
-    audio_encoder_service: Any | None = None,
+    audio_encoder_service: "FunASRPreLMEncoderService | None" = None,
 ) -> tuple[
     Callable[[StagePayload], FunASRRequestData],
     Callable[[FunASRRequestData], StagePayload],
@@ -371,7 +382,7 @@ def make_fun_asr_scheduler_adapters(
 
 
 def make_fun_asr_stream_output_builder(
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     eos_token_id: int | None = None,
     min_emit_interval_s: float = 0.0,
 ) -> Callable[
