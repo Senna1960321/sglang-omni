@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections import deque
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import torch
 
@@ -12,6 +13,7 @@ from sglang_omni.model_runner.prefill_inputs import (
     OmniPrefillInputs,
     attach_omni_prefill_inputs,
 )
+from sglang_omni.models.qwen3_omni.pending_text_queue import PendingTextTensorQueue
 from sglang_omni.scheduling.messages import OutgoingMessage
 
 if TYPE_CHECKING:
@@ -32,6 +34,11 @@ if TYPE_CHECKING:
         SchedulerOutput,
         SchedulerRequest,
     )
+
+
+TalkerInputQueue: TypeAlias = (
+    PendingTextTensorQueue | deque[torch.Tensor] | list[torch.Tensor] | None
+)
 
 
 class QwenTalkerModelRunner(ModelRunner):
@@ -493,7 +500,7 @@ class QwenTalkerModelRunner(ModelRunner):
         )
 
     @staticmethod
-    def _pop_left(queue: Any) -> torch.Tensor | None:
+    def _pop_left(queue: TalkerInputQueue) -> torch.Tensor | None:
         if not queue:
             return None
         if hasattr(queue, "popleft"):
@@ -503,7 +510,7 @@ class QwenTalkerModelRunner(ModelRunner):
         return None
 
     @staticmethod
-    def _peek_left(queue: Any) -> torch.Tensor | None:
+    def _peek_left(queue: TalkerInputQueue) -> torch.Tensor | None:
         if not queue:
             return None
         if isinstance(queue, list):

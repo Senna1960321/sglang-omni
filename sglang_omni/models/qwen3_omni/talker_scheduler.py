@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from sglang.srt.managers.schedule_batch import ScheduleBatch
     from sglang.srt.server_args import ServerArgs
 
+    from sglang_omni.scheduling.sglang_backend.request_data import SGLangARRequestData
+
 logger = logging.getLogger(__name__)
 
 ChunkT = TypeVar("ChunkT")
@@ -209,14 +211,16 @@ class QwenTalkerScheduler(OmniScheduler):
         super().self_check_during_idle()
 
     @staticmethod
-    def _append_stream_chunk_default(req_data: Any, chunk: object) -> None:
+    def _append_stream_chunk_default(
+        req_data: "SGLangARRequestData", chunk: object
+    ) -> None:
         pending_text_queue = getattr(req_data, "pending_text_queue", None)
         if pending_text_queue is None:
             pending_text_queue = deque()
             req_data.pending_text_queue = pending_text_queue
         pending_text_queue.append(getattr(chunk, "data", chunk))
 
-    def _mark_stream_done(self, req_data: Any) -> None:
+    def _mark_stream_done(self, req_data: "SGLangARRequestData") -> None:
         if self._stream_done_handler is None:
             req_data.thinker_chunks_done = True
             return
