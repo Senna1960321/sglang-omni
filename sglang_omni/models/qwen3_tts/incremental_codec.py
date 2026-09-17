@@ -3,54 +3,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING
 
 import torch
 import torch.nn.functional as F
 
-
-class CausalConvModule(Protocol):
-    conv: torch.nn.Conv1d
-    padding: int
-
-
-class AttentionModule(Protocol):
-    head_dim: int
-    num_key_value_groups: int
-    scaling: float
-    sliding_window: int
-    q_proj: torch.nn.Linear
-    k_proj: torch.nn.Linear
-    v_proj: torch.nn.Linear
-    o_proj: torch.nn.Linear
-    q_norm: torch.nn.Identity
-    k_norm: torch.nn.Identity
-
-
-class ConvNeXtModule(Protocol):
-    @property
-    def dwconv(self) -> CausalConvModule: ...
-
-    norm: torch.nn.LayerNorm
-    pwconv1: torch.nn.Linear
-    act: torch.nn.GELU
-    pwconv2: torch.nn.Linear
-    gamma: torch.nn.Parameter
-
-
-class ResidualUnitModule(Protocol):
-    @property
-    def act1(self) -> torch.nn.Module: ...
-
-    @property
-    def conv1(self) -> CausalConvModule: ...
-
-    @property
-    def act2(self) -> torch.nn.Module: ...
-
-    @property
-    def conv2(self) -> CausalConvModule: ...
+if TYPE_CHECKING:
+    from qwen_tts.core.tokenizer_12hz.modeling_qwen3_tts_tokenizer_v2 import (
+        Qwen3TTSTokenizerV2CausalConvNet,
+        Qwen3TTSTokenizerV2CausalTransConvNet,
+        Qwen3TTSTokenizerV2ConvNeXtBlock,
+        Qwen3TTSTokenizerV2Decoder,
+        Qwen3TTSTokenizerV2DecoderAttention,
+        Qwen3TTSTokenizerV2DecoderDecoderResidualUnit,
+        Qwen3TTSTokenizerV2DecoderTransformerModel,
+    )
 
 
 @dataclass(frozen=True)
@@ -143,7 +112,7 @@ class Qwen3TTSIncrementalCodecState:
 
 
 def incremental_causal_conv1d(
-    module: CausalConvModule,
+    module: "Qwen3TTSTokenizerV2CausalConvNet",
     hidden_states: torch.Tensor,
     state: Qwen3TTSIncrementalCodecState,
     key: str,
@@ -176,7 +145,7 @@ def incremental_causal_conv1d(
 
 
 def incremental_causal_transconv1d(
-    module: Any,
+    module: "Qwen3TTSTokenizerV2CausalTransConvNet",
     hidden_states: torch.Tensor,
     state: Qwen3TTSIncrementalCodecState,
     key: str,
@@ -246,7 +215,7 @@ def _repeat_kv(hidden_states: torch.Tensor, groups: int) -> torch.Tensor:
 
 
 def _incremental_attention(
-    attention: AttentionModule,
+    attention: "Qwen3TTSTokenizerV2DecoderAttention",
     hidden_states: torch.Tensor,
     position_embeddings: tuple[torch.Tensor, torch.Tensor],
     state: Qwen3TTSIncrementalCodecState,
@@ -310,7 +279,7 @@ def _incremental_attention(
 
 
 def _incremental_transformer(
-    transformer: Any,
+    transformer: "Qwen3TTSTokenizerV2DecoderTransformerModel",
     hidden_states: torch.Tensor,
     state: Qwen3TTSIncrementalCodecState,
 ) -> torch.Tensor:
@@ -372,7 +341,7 @@ def _incremental_transformer(
 
 
 def _incremental_convnext(
-    module: ConvNeXtModule,
+    module: "Qwen3TTSTokenizerV2ConvNeXtBlock",
     hidden_states: torch.Tensor,
     state: Qwen3TTSIncrementalCodecState,
     key: str,
@@ -390,7 +359,7 @@ def _incremental_convnext(
 
 
 def _incremental_residual_unit(
-    module: ResidualUnitModule,
+    module: "Qwen3TTSTokenizerV2DecoderDecoderResidualUnit",
     hidden_states: torch.Tensor,
     state: Qwen3TTSIncrementalCodecState,
     key: str,
@@ -408,7 +377,7 @@ def _incremental_residual_unit(
 
 
 class Qwen3TTSIncrementalDecoder:
-    def __init__(self, decoder: Any) -> None:
+    def __init__(self, decoder: "Qwen3TTSTokenizerV2Decoder") -> None:
         self._require_attrs(
             decoder,
             "decoder",
@@ -496,11 +465,13 @@ class Qwen3TTSIncrementalDecoder:
         self._decoder = decoder
         self.total_upsample = int(decoder.total_upsample)
         self._state_spec: Qwen3TTSIncrementalCodecStateSpec | None = None
-        self._compiled_kernel: Any = None
+        self._compiled_kernel: (
+            Callable[[torch.Tensor, Qwen3TTSIncrementalCodecState], torch.Tensor] | None
+        ) = None
         self._compiled_shapes: set[tuple[int, int]] = set()
 
     @staticmethod
-    def _require_attrs(module: Any, path: str, *names: str) -> None:
+    def _require_attrs(module: object, path: str, *names: str) -> None:
         missing = [name for name in names if not hasattr(module, name)]
         if missing:
             raise TypeError(
@@ -525,10 +496,12 @@ class Qwen3TTSIncrementalDecoder:
         conv: list[tuple[str, int, int]] = []
         transconv: list[tuple[str, int, int]] = []
 
-        def add_conv(module: CausalConvModule, key: str) -> None:
+        def add_conv(module: "Qwen3TTSTokenizerV2CausalConvNet", key: str) -> None:
             conv.append((key, int(module.conv.in_channels), int(module.padding)))
 
-        def add_transconv(module: Any, key: str) -> None:
+        def add_transconv(
+            module: "Qwen3TTSTokenizerV2CausalTransConvNet", key: str
+        ) -> None:
             transconv.append(
                 (key, int(module.conv.out_channels), int(module.right_pad))
             )
