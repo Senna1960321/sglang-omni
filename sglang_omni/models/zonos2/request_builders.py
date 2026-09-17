@@ -12,7 +12,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import torch
 
@@ -87,7 +87,7 @@ def build_zonos2_state(payload: StagePayload) -> Zonos2State:
             "ZONOS2 does not support seed because sampling uses the shared device RNG"
         )
 
-    gen: dict[str, Any] = {}
+    gen: dict[str, int | float] = {}
     raw_max = params.get("max_new_tokens")
     if raw_max is not None and not isinstance(raw_max, bool):
         gen["max_tokens"] = int(raw_max)
