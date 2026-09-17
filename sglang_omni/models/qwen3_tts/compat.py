@@ -6,9 +6,12 @@ from __future__ import annotations
 import inspect
 import threading
 from collections.abc import Callable
-from typing import Any, ParamSpec, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ParamSpec, Protocol, TypeVar, overload
 
 import torch
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
 
 Params = ParamSpec("Params")
 Result = TypeVar("Result")
@@ -32,7 +35,7 @@ _MASK_FACTORY_NAMES = (
 
 
 def _compute_default_rope_parameters(
-    config: Any,
+    config: PretrainedConfig,
     device: torch.device | None = None,
     seq_len: int | None = None,
     layer_type: str | None = None,
@@ -59,7 +62,10 @@ def _compute_default_rope_parameters(
 def _make_mask_factory_compat(
     original: Callable[..., Result], name: str
 ) -> Callable[..., Result]:
-    def mask_factory_compat(*args: Any, **kwargs: Any) -> Result:
+    def mask_factory_compat(
+        *args: Any,
+        **kwargs: Any,
+    ) -> Result:
         if "input_embeds" in kwargs:
             kwargs.setdefault("inputs_embeds", kwargs.pop("input_embeds"))
         kwargs.pop("cache_position", None)

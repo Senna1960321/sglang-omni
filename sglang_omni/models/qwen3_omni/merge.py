@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 import torch
 
@@ -226,7 +229,7 @@ def decode_events(
     *,
     thinker_out: ThinkerOutput,
     state: Qwen3OmniPipelineState,
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     eos_token_id: int | None,
     step: int,
 ) -> Iterable[Qwen3OmniEvent]:

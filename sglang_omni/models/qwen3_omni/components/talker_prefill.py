@@ -25,6 +25,7 @@ from sglang_omni.proto import StagePayload
 
 if TYPE_CHECKING:
     from sglang_omni.models.qwen3_omni.components.talker import Qwen3OmniTalker
+    from sglang_omni.pipeline.stage.stream_queue import StreamItem
     from sglang_omni.scheduling.sglang_backend.request_data import SGLangARRequestData
 
 _THINKER_EMBED_CANDIDATE_KEYS = (
@@ -197,7 +198,7 @@ class TalkerPrefillBuilder:
     def build_prompt_prefill(
         self,
         payload: StagePayload,
-        thinker_chunks: list[Any],
+        thinker_chunks: list["StreamItem"],
         *,
         thinker_done: bool,
     ) -> dict[str, Any]:
@@ -257,7 +258,9 @@ class TalkerPrefillBuilder:
             "prompt_model_inputs": prompt_model_inputs,
         }
 
-    def append_text_chunk(self, req_data: "SGLangARRequestData", chunk: Any) -> None:
+    def append_text_chunk(
+        self, req_data: "SGLangARRequestData", chunk: "StreamItem"
+    ) -> None:
         if req_data.thinker_chunks_done:
             return
 
@@ -284,14 +287,16 @@ class TalkerPrefillBuilder:
         if isinstance(req_data.tts_eos_embed, torch.Tensor):
             pending_text_queue.append(req_data.tts_eos_embed)
 
-    def extract_chunk_token_ids(self, thinker_chunks: list[Any]) -> torch.Tensor:
+    def extract_chunk_token_ids(
+        self, thinker_chunks: list["StreamItem"]
+    ) -> torch.Tensor:
         token_ids = []
         for chunk in thinker_chunks:
             metadata = chunk.metadata or {}
             token_ids.append(int(metadata["token_id"]))
         return torch.tensor(token_ids, dtype=torch.long)
 
-    def project_assistant_chunk(self, chunk: Any) -> torch.Tensor:
+    def project_assistant_chunk(self, chunk: "StreamItem") -> torch.Tensor:
         metadata = chunk.metadata or {}
         token_id = metadata.get("token_id")
         if token_id is not None:

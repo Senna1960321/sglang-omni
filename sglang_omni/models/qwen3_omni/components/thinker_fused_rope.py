@@ -9,12 +9,17 @@ fused, while any multimodal batch falls back whole. Installs by default on XPU.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from types import MethodType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 
 from sglang_omni.platforms import current_platform
+from sglang_omni.vendor.sglang.core import ForwardBatch
+
+if TYPE_CHECKING:
+    from sglang.srt.models.qwen3_vl_moe import Qwen3MoeLLMModel
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +35,7 @@ class ThinkerFusedRopeGate:
         self.enabled = False
         self.positions: torch.Tensor | None = None
 
-    def evaluate(self, positions: torch.Tensor, forward_batch: Any) -> None:
+    def evaluate(self, positions: torch.Tensor, forward_batch: ForwardBatch) -> None:
         """Decide once per forward, before any layer runs."""
         self.enabled = False
         self.positions = None
@@ -50,7 +55,7 @@ def _fused_apply_qk_norm_rope(
     attn: Any,
     qkv: torch.Tensor,
     positions: torch.Tensor,
-    forward_batch: Any,
+    forward_batch: ForwardBatch,
     *,
     gate: ThinkerFusedRopeGate,
     kernel: Any,
@@ -90,9 +95,9 @@ def _prefill_graph_enabled() -> bool:
 
 
 def install_thinker_fused_rope(
-    model: Any,
+    model: "Qwen3MoeLLMModel",
     *,
-    kernel_provider: Any = None,
+    kernel_provider: Callable[[], Callable[..., None] | None] | None = None,
     prefill_graph_enabled: bool | None = None,
 ) -> ThinkerFusedRopeGate | None:
     """Route eligible thinker attention layers through the fused kernel.

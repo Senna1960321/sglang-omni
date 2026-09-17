@@ -13,7 +13,7 @@ import queue
 import time
 from collections.abc import Generator, Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import torch
@@ -214,7 +214,7 @@ class Code2WavScheduler(StreamingVocoderBase[Code2WavStreamState, "list[int]"]):
 
     def __init__(
         self,
-        model: Any,
+        model: "Qwen3OmniMoeCode2Wav",
         device: str,
         stream_chunk_size: int = 10,
         left_context_size: int = 25,

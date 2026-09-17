@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -262,7 +262,7 @@ class Qwen3TTSModelRunner(ModelRunner):
             sched_req.data.pending_feedback_queue.append(embeds_snap[row_idx])
 
     def _sample_positions(
-        self, forward_batch: Any, device: torch.device
+        self, forward_batch: "ForwardBatch | None", device: torch.device
     ) -> torch.Tensor:
         forward_mode = getattr(forward_batch, "forward_mode", None)
         is_decode = (

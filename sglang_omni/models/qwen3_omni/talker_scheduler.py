@@ -18,6 +18,7 @@ from sglang_omni.vendor.sglang.server_args import override_server_args
 
 if TYPE_CHECKING:
     from sglang.srt.managers.schedule_batch import ScheduleBatch
+    from sglang.srt.server_args import ServerArgs
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class DecodeBatch(Protocol):
 
 
 def configure_talker_server_args(
-    server_args: Any,
+    server_args: "ServerArgs",
     *,
     feedback_enabled: bool = True,
 ) -> bool:
@@ -178,7 +179,7 @@ class QwenTalkerScheduler(OmniScheduler):
             return None
         return batch
 
-    def _rollback_decode_prep_after_skip(self, batch: Any) -> None:
+    def _rollback_decode_prep_after_skip(self, batch: "ScheduleBatch") -> None:
         # Note(Chenchen Hong, Xuesong): This is talker-only. It does not fully
         # invert prepare_for_decode; talker disables overlap/spec/Mamba/hisparse,
         # and the penalizer's cumulate scatter_ is idempotent under the talker's
