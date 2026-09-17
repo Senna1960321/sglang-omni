@@ -11,7 +11,7 @@ import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import count
-from typing import TYPE_CHECKING, Any, Literal, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Mapping, TypeVar, overload
 
 import torch
 
@@ -40,6 +40,9 @@ from sglang_omni.utils.cuda_staging import GrowablePinnedBuffer, PinnedTransferS
 
 if TYPE_CHECKING:
     from qwen_tts import Qwen3TTSTokenizer
+    from qwen_tts.core.tokenizer_12hz.modeling_qwen3_tts_tokenizer_v2 import (
+        Qwen3TTSTokenizerV2Decoder,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -423,7 +426,7 @@ class _Qwen3TTSInitialDecodeGraphs:
 
     def __init__(
         self,
-        decoder: Any,
+        decoder: "Qwen3TTSTokenizerV2Decoder",
         *,
         device: torch.device,
         num_quantizers: int,
@@ -1835,9 +1838,32 @@ class Qwen3TTSStreamingVocoderScheduler(
             for plan, row in zip(plans, waveform)
         ], waveform
 
+    @overload
     def _runner_for_stream(
-        self, stream: torch.cuda.Stream | None, initial: Any, worker_attr: str
-    ) -> Any:
+        self,
+        stream: torch.cuda.Stream | None,
+        initial: _Qwen3TTSInitialDecodeGraphs | None,
+        worker_attr: Literal["graphs"],
+    ) -> _Qwen3TTSInitialDecodeGraphs | None: ...
+
+    @overload
+    def _runner_for_stream(
+        self,
+        stream: torch.cuda.Stream | None,
+        initial: Qwen3TTSIncrementalCodecCudaGraphRunner | None,
+        worker_attr: Literal["incremental_graphs"],
+    ) -> Qwen3TTSIncrementalCodecCudaGraphRunner | None: ...
+
+    def _runner_for_stream(
+        self,
+        stream: torch.cuda.Stream | None,
+        initial: (
+            _Qwen3TTSInitialDecodeGraphs
+            | Qwen3TTSIncrementalCodecCudaGraphRunner
+            | None
+        ),
+        worker_attr: str,
+    ) -> _Qwen3TTSInitialDecodeGraphs | Qwen3TTSIncrementalCodecCudaGraphRunner | None:
         """The graph runner that was built for this decode stream, if any."""
         if stream is self._decode_stream:
             return initial
