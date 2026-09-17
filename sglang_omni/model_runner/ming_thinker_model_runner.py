@@ -179,7 +179,7 @@ class MingThinkerModelRunner(ModelRunner):
         return token_id
 
     @staticmethod
-    def _num_embed_rows(embeds: Any) -> int:
+    def _num_embed_rows(embeds: torch.Tensor) -> int:
         shape = getattr(embeds, "shape", None)
         if shape is not None and len(shape) > 0:
             return int(shape[0])
