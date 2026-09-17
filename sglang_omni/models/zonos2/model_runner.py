@@ -11,7 +11,7 @@ stays CUDA-graph-replayable (decode input_ids are row indices). No frame loop.
 from __future__ import annotations
 
 from queue import Queue
-from typing import Any
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -25,11 +25,16 @@ from sglang_omni.models.zonos2.streaming_contract import (
 from sglang_omni.scheduling.messages import OutgoingMessage
 from sglang_omni.scheduling.sglang_backend.output_processor import SGLangOutputProcessor
 
+if TYPE_CHECKING:
+    from sglang.srt.hardware_backend.mlx.tp_worker import MlxTpModelWorker
+
+    from sglang_omni.model_runner.model_worker import ModelWorker
+
 
 class Zonos2ModelRunner(ModelRunner):
     def __init__(
         self,
-        tp_worker: Any,
+        tp_worker: "ModelWorker | MlxTpModelWorker",
         output_processor: SGLangOutputProcessor,
         *,
         compile_sampler: bool = False,

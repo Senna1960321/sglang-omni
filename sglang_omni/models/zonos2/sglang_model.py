@@ -10,7 +10,7 @@ backbone hidden states and exposes the head via :meth:`compute_logits`.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -320,7 +320,7 @@ class Zonos2SGLangModel(nn.Module):
         positions: torch.Tensor,
         forward_batch: ForwardBatch,
         input_embeds: Optional[torch.Tensor] = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> LogitsProcessorOutput:
         # Prefill: the runner stages the summed (speaker-injected) embedding on
         # forward_batch. Decode: input_ids are row indices into the fixed feedback

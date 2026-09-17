@@ -48,7 +48,7 @@ def _import_mistral_common_for_voxtral():
 
 def _validate_voxtral_speech_params(
     *,
-    inputs: Any,
+    inputs: object,
     params: dict[str, Any],
     tts_params: dict[str, Any],
 ) -> None:
@@ -85,7 +85,7 @@ def _validate_voxtral_speech_params(
         )
 
 
-def _ensure_non_empty_audio_codes(audio_codes: Any) -> None:
+def _ensure_non_empty_audio_codes(audio_codes: object) -> None:
     if audio_codes is None:
         raise ValueError("Voxtral TTS generated no audio codes")
     if isinstance(audio_codes, torch.Tensor) and audio_codes.numel() == 0:
