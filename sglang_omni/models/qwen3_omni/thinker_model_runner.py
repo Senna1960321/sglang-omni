@@ -18,7 +18,7 @@ from sglang_omni.model_runner.prefill_inputs import (
 from sglang_omni.model_runner.thinker_model_runner import ThinkerModelRunner
 
 if TYPE_CHECKING:
-    from sglang.srt.managers.schedule_batch import ScheduleBatch
+    from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
     from sglang.srt.managers.scheduler import GenerationBatchResult
     from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 
@@ -91,7 +91,7 @@ class Qwen3OmniThinkerModelRunner(ThinkerModelRunner):
         return [int(item) for item in value]
 
     def _mm_positions(
-        self, req: object, pad_values: dict[str, PadValueT]
+        self, req: "Req", pad_values: dict[str, PadValueT]
     ) -> dict[str, torch.Tensor] | None:
         try:
             positions = self._req_mm_token_positions(req, pad_values)
@@ -143,7 +143,7 @@ class Qwen3OmniThinkerModelRunner(ThinkerModelRunner):
 
     def _audio_inputs_are_supported(
         self,
-        req: object,
+        req: "Req",
         model_inputs: object,
         chunk_span: tuple[int, int],
     ) -> bool:

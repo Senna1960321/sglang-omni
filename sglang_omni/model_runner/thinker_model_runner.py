@@ -20,7 +20,7 @@ from sglang_omni.model_runner.sglang_execution import attn_forward_context
 if TYPE_CHECKING:
     from sglang.srt.hardware_backend.mlx.tp_worker import MlxTpModelWorker
     from sglang.srt.layers.logits_processor import LogitsProcessorOutput
-    from sglang.srt.managers.schedule_batch import ScheduleBatch
+    from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
     from sglang.srt.model_executor.forward_batch_info import (
         CaptureHiddenMode,
         ForwardBatch,
@@ -104,7 +104,9 @@ class ThinkerModelRunner(ModelRunner):
     # ------------------------------------------------------------------
 
     def _req_mm_token_positions(
-        self, req: Any, pad_values: dict
+        self,
+        req: "Req",
+        pad_values: dict,
     ) -> dict[str, torch.Tensor]:
         """Prompt-absolute placeholder positions per modality, as CPU int64
         tensors so the merge never reads placement off a GPU mask."""
@@ -146,7 +148,9 @@ class ThinkerModelRunner(ModelRunner):
         )
 
     @staticmethod
-    def _ensure_consumed_cursor(req: Any) -> dict[str, Any]:
+    def _ensure_consumed_cursor(
+        req: "Req",
+    ) -> dict[str, Any]:
         consumed = req._omni_consumed
         if consumed is None:
             consumed = {}

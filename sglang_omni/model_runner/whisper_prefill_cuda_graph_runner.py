@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
@@ -47,7 +47,7 @@ class WhisperPrefillCudaGraphRunner(PrefillCudaGraphRunner):
     def load_batch(
         self,
         forward_batch: ForwardBatch,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ForwardBatch:
         static_forward_batch = super().load_batch(forward_batch, **kwargs)
         static_forward_batch.encoder_lens_cpu = forward_batch.encoder_lens_cpu
