@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 import torch
 from sglang.srt.layers.communicator import enable_moe_dense_fully_dp
@@ -849,7 +849,9 @@ class BailingMoeV2ForCausalLM(nn.Module):
         self._patch_token_ids(config, llm_cfg)
 
     @staticmethod
-    def _patch_token_ids(config: "PretrainedConfig", llm_cfg: Any) -> None:
+    def _patch_token_ids(
+        config: "PretrainedConfig", llm_cfg: "PretrainedConfig | None"
+    ) -> None:
         """Set image/video/audio token IDs on the HF config."""
         if not hasattr(config, "image_token_id"):
             config.image_token_id = getattr(llm_cfg, "image_patch_token", None)
