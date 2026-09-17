@@ -27,6 +27,10 @@ class XpuCaptureKwargs(TypedDict, total=False):
     stream: torch.xpu.Stream
 
 
+class ReplayableGraph(Protocol):
+    def replay(self) -> None: ...
+
+
 class DeviceGraphBackend(Protocol):
     """Records a model-owned graph on one accelerator."""
 
@@ -36,7 +40,7 @@ class DeviceGraphBackend(Protocol):
         pool: Any | None = None,
         stream: Any | None = None,
         thread_local_errors: bool = False,
-    ) -> AbstractContextManager[Any]:
+    ) -> AbstractContextManager[ReplayableGraph]:
         """Open a capture and yield the graph it records into."""
         ...
 
@@ -74,7 +78,7 @@ class NpuDeviceGraphBackend:
         pool: tuple[int, int] | None = None,
         stream: torch.Stream | None = None,
         thread_local_errors: bool = False,
-    ) -> Iterator[Any]:
+    ) -> Iterator[ReplayableGraph]:
         graph = torch.npu.NPUGraph()
         kwargs: dict[str, object] = {}
         if pool is not None:
@@ -115,5 +119,6 @@ __all__ = [
     "CudaDeviceGraphBackend",
     "DeviceGraphBackend",
     "NpuDeviceGraphBackend",
+    "ReplayableGraph",
     "XpuDeviceGraphBackend",
 ]

@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.layers.attention.vision import VisionAttentionMetadata
 
 from sglang_omni.platforms import current_platform
+from sglang_omni.platforms.device_graph import ReplayableGraph
 
 if TYPE_CHECKING:
     from sglang.srt.models.qwen3_omni_moe import Qwen3OmniMoeAudioEncoder
@@ -54,10 +55,6 @@ def build_buckets(max_batch: int, max_tokens_per_clip: int) -> tuple[int, ...]:
         step *= 2
     buckets.append(ceiling)
     return tuple(buckets)
-
-
-class ReplayableGraph(Protocol):
-    def replay(self) -> None: ...
 
 
 @dataclass
