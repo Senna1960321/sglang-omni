@@ -29,6 +29,10 @@ from sglang_omni.vendor.sglang.utils import make_layers
 if TYPE_CHECKING:
     from sglang.srt.layers.quantization.base_config import QuantizationConfig
 
+    from sglang_omni.models.fishaudio_s2_pro.fish_speech.models.text2semantic.audio_decoder import (
+        FishQwen3AudioDecoder,
+    )
+
 logger = logging.getLogger(__name__)
 
 # Note (Ratish): fixed top-k width keeps decode graph shape stable;
@@ -244,7 +248,7 @@ class S2ProSGLangTextModel(nn.Module):
 
     def setup_vq_decode(
         self,
-        audio_decoder: nn.Module,
+        audio_decoder: "FishQwen3AudioDecoder",
         *,
         num_codebooks: int,
         codebook_size: int,

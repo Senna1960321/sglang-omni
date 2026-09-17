@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -16,6 +16,11 @@ from sglang_omni.scheduling.messages import OutgoingMessage
 from sglang_omni.scheduling.pipeline_state import build_usage
 from sglang_omni.scheduling.streaming_simple_scheduler import StreamingSimpleScheduler
 from sglang_omni.utils.audio_payload import audio_waveform_payload
+
+if TYPE_CHECKING:
+    from sglang_omni.models.fishaudio_s2_pro.fish_speech.models.dac.modded_dac import (
+        DAC,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,7 @@ class _StreamVocoderState:
 
 
 def resolve_stream_overlap_tokens(
-    codec: Any, requested_overlap_tokens: int | None
+    codec: "DAC", requested_overlap_tokens: int | None
 ) -> int:
     if requested_overlap_tokens is not None:
         if requested_overlap_tokens < 0:
@@ -49,7 +54,7 @@ def build_stream_vocoder_chunk(
     state: _StreamVocoderState,
     codes: torch.Tensor,
     *,
-    codec: Any,
+    codec: "DAC",
     device: torch.device,
     stream_stride: int,
     stream_followup_stride: int,
@@ -85,7 +90,7 @@ def build_stream_vocoder_chunk(
 def flush_stream_vocoder_chunk(
     state: _StreamVocoderState,
     *,
-    codec: Any,
+    codec: "DAC",
     device: torch.device,
     stream_overlap_tokens: int,
     stream_crossfade_samples: int,
@@ -119,7 +124,7 @@ def flush_stream_vocoder_chunk(
 def _build_stream_vocoder_chunk(
     state: _StreamVocoderState,
     *,
-    codec: Any,
+    codec: "DAC",
     device: torch.device,
     stream_overlap_tokens: int,
     stream_crossfade_samples: int,
@@ -279,7 +284,7 @@ class S2ProVocoderScheduler(StreamingSimpleScheduler):
 
     def __init__(
         self,
-        codec: Any,
+        codec: "DAC",
         *,
         device: str,
         stream_stride: int = 40,

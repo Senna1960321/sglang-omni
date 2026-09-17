@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import torch
 from transformers import PreTrainedTokenizerFast
@@ -100,7 +100,7 @@ class S2ProTokenizerAdapter:
         *,
         num_codebooks: int = 10,
         speaker: int | str = 0,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> S2ProPrompt:
         """Build an S2-Pro inference prompt using Qwen3 chat format."""
         if references:
