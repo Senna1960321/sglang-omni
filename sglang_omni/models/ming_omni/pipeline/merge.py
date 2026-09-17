@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, TypeGuard
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, TypeGuard
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 import torch
 
@@ -148,7 +151,7 @@ def decode_events(
     *,
     thinker_out: ThinkerOutput,
     state: MingOmniPipelineState,
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     eos_token_id: int | None,
     step: int,
 ) -> Iterable[MingOmniEvent]:

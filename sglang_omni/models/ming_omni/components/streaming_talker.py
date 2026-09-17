@@ -17,7 +17,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import numpy as np
 import torch
@@ -27,6 +27,14 @@ from sglang_omni.models.ming_omni.pipeline.next_stage import TALKER_STREAM_STAGE
 from sglang_omni.pipeline.stage.stream_queue import StreamItem
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.messages import IncomingMessage, OutgoingMessage
+
+if TYPE_CHECKING:
+    from sglang_omni.models.ming_omni.talker.audio_vae.modeling_audio_vae import (
+        AudioVAE,
+    )
+    from sglang_omni.models.ming_omni.talker.modeling_ming_omni_talker import (
+        MingOmniTalker,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +84,8 @@ class MingStreamingTalkerScheduler:
         *,
         device: str = "cuda",
         voice: str = DEFAULT_VOICE,
-        talker: Any | None = None,
-        audio_detokenizer: Any | None = None,
+        talker: "MingOmniTalker | None" = None,
+        audio_detokenizer: "AudioVAE | None" = None,
         sample_rate: int | None = None,
     ) -> None:
         self.inbox: _queue_mod.Queue[IncomingMessage] = _queue_mod.Queue()
@@ -335,13 +343,17 @@ class MingStreamingTalkerScheduler:
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
-    def _extract_waveform(item: object) -> Any | None:
+    def _extract_waveform(
+        item: object,
+    ) -> Any | None:
         if isinstance(item, tuple):
             return item[0] if item else None
         return item
 
     @staticmethod
-    def _waveform_numel(waveform: Any) -> int:
+    def _waveform_numel(
+        waveform: Any,
+    ) -> int:
         if isinstance(waveform, torch.Tensor):
             return int(waveform.numel())
         if isinstance(waveform, np.ndarray):
@@ -351,7 +363,9 @@ class MingStreamingTalkerScheduler:
         return int(np.asarray(waveform).size)
 
     @staticmethod
-    def _serialize_waveform(waveform: Any) -> tuple[bytes, list[int], str]:
+    def _serialize_waveform(
+        waveform: Any,
+    ) -> tuple[bytes, list[int], str]:
         if isinstance(waveform, torch.Tensor):
             array = waveform.detach().cpu().float().numpy()
         elif isinstance(waveform, np.ndarray):

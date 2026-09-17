@@ -44,7 +44,7 @@ def preprocess_ming_tts_payload(
     context_length: int,
     max_decode_steps_cap: int | None = None,
 ) -> StagePayload:
-    def optional_text(value: Any) -> str | None:
+    def optional_text(value: object) -> str | None:
         if value is None:
             return None
         text_value = str(value).strip()
