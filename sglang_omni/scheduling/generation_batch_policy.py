@@ -21,19 +21,19 @@ _MISSING = object()
 _PREFILL_PADDING_FACTOR = 2
 
 
-def get_decode_cuda_graph_max_bs(server_args: Any) -> Any:
+def get_decode_cuda_graph_max_bs(server_args: object) -> Any:
     """Read the resolved SGLang decode CUDA Graph batch cap."""
     cfg = resolved_view(server_args)
     return cfg.cuda_graph_config.decode.max_bs
 
 
-def get_decode_cuda_graph_bs(server_args: Any) -> Any:
+def get_decode_cuda_graph_bs(server_args: object) -> Any:
     """Read the resolved SGLang decode CUDA Graph batch buckets."""
     cfg = resolved_view(server_args)
     return cfg.cuda_graph_config.decode.bs
 
 
-def get_prefill_cuda_graph_backend(server_args: Any) -> str:
+def get_prefill_cuda_graph_backend(server_args: object) -> str:
     """Read the resolved SGLang prefill CUDA graph backend."""
     cfg = resolved_view(server_args)
     return cfg.cuda_graph_config.prefill.backend
@@ -237,7 +237,7 @@ def build_generation_batch_overrides(
 def validate_generation_batch_policy(
     *,
     model_name: str,
-    server_args: Any,
+    server_args: object,
     model_buffer_bs: int | None = None,
 ) -> None:
     errors: list[str] = []
@@ -314,7 +314,7 @@ def validate_generation_batch_policy(
 
 
 def _validate_prefill_graph_policy(
-    server_args: Any,
+    server_args: object,
     cuda_graph_enabled: bool,
     errors: list[str],
 ) -> None:

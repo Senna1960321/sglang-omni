@@ -252,14 +252,14 @@ class CommRouter:
         return kind, self.relay(kind)
 
     def relay_for_payload(
-        self, target: str, payload: Any
+        self, target: str, payload: object
     ) -> tuple[TransportKind, Relay]:
         kind = self.outbound_payload(target, payload)
         if kind is TransportKind.LOCAL_OBJECT:
             raise ValueError("local_object has no relay")
         return kind, self.relay(kind)
 
-    def outbound_payload(self, target: str, payload: Any) -> TransportKind:
+    def outbound_payload(self, target: str, payload: object) -> TransportKind:
         if target in self.remote_stage_names:
             kind = TransportKind.MOONCAKE
         else:

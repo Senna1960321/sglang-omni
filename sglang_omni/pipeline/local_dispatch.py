@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Iterable
 
 if TYPE_CHECKING:
     from sglang_omni.pipeline.stage import Stage
+    from sglang_omni.proto.request import StagePayload
 
 
 class LocalStageDispatcher:
@@ -42,7 +43,7 @@ class LocalStageDispatcher:
         from_stage: str,
         to_stage: str,
         request_id: str,
-        payload: Any,
+        payload: "StagePayload",
         replica_bindings: dict[str, int] | None = None,
     ) -> None:
         target = self._get_stage(from_stage, to_stage)
@@ -57,7 +58,7 @@ class LocalStageDispatcher:
         to_stage: str,
         request_id: str,
         chunk_id: int,
-        data: Any,
+        data: object,
         metadata: dict[str, Any] | None = None,
         replica_bindings: dict[str, int] | None = None,
     ) -> None:

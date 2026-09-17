@@ -144,7 +144,9 @@ class SimpleScheduler:
 
     @staticmethod
     def _emit_result(
-        request_id: str, result: Any, outbox: _queue_mod.Queue[OutgoingMessage]
+        request_id: str,
+        result: Any,
+        outbox: _queue_mod.Queue[OutgoingMessage],
     ) -> None:
         outbox.put(
             OutgoingMessage(
@@ -207,10 +209,10 @@ class SimpleScheduler:
             self._emit_result(msg.request_id, result, self.outbox)
 
     @staticmethod
-    async def _await_result(result: Awaitable[Any]) -> Any:
+    async def _await_result(result: Awaitable[object]) -> object:
         return await result
 
-    def _run_compute_in_thread(self, payload: Any) -> Any:
+    def _run_compute_in_thread(self, payload: object) -> object:
         result = self._fn(payload)
         if inspect.isawaitable(result):
             result = asyncio.run(self._await_result(result))

@@ -84,6 +84,7 @@ if TYPE_CHECKING:
     from sglang_omni.model_runner.base import ModelRunner
     from sglang_omni.model_runner.model_worker import ModelWorker
     from sglang_omni.model_runner.weight_checker import WeightCheckResult
+    from sglang_omni.pipeline.stage.stream_queue import StreamItem
 
 logger = logging.getLogger(__name__)
 
@@ -1320,7 +1321,10 @@ class OmniScheduler:
         elif not isinstance(unpadded, array):
             req.origin_input_ids_unpadded = array("q", unpadded)
 
-    def _prepare_request_limits(self, req_data: Any) -> str | None:
+    def _prepare_request_limits(
+        self,
+        req_data: Any,
+    ) -> str | None:
         req = req_data.req
         self.init_req_max_new_tokens(req)
         error_msg = validate_input_length(
@@ -1782,7 +1786,7 @@ class OmniScheduler:
                 )
             )
 
-    def _on_stream_chunk(self, request_id: str, chunk: Any) -> None:
+    def _on_stream_chunk(self, request_id: str, chunk: "StreamItem") -> None:
         if request_id in self._completed_request_ids:
             return
         req_data = self._find_request_data(request_id)
@@ -2781,20 +2785,28 @@ class OmniScheduler:
         return None
 
     @staticmethod
-    def _append_stream_chunk_default(req_data: Any, chunk: Any) -> None:
+    def _append_stream_chunk_default(
+        req_data: Any,
+        chunk: "StreamItem",
+    ) -> None:
         stream_chunks = getattr(req_data, "stream_chunks", None)
         if stream_chunks is None:
             stream_chunks = deque()
             req_data.stream_chunks = stream_chunks
         stream_chunks.append(chunk)
 
-    def _append_stream_chunk(self, req_data: ARRequestData, chunk: Any) -> None:
+    def _append_stream_chunk(
+        self, req_data: ARRequestData, chunk: "StreamItem"
+    ) -> None:
         if self._stream_chunk_handler is None:
             self._append_stream_chunk_default(req_data, chunk)
             return
         self._stream_chunk_handler(req_data, chunk)
 
-    def _mark_stream_done(self, req_data: Any) -> None:
+    def _mark_stream_done(
+        self,
+        req_data: Any,
+    ) -> None:
         if self._stream_done_handler is None:
             req_data.stream_done = True
             return

@@ -77,13 +77,20 @@ class StreamingSimpleScheduler:
         self.state_lock = threading.RLock()
         self.abort_lock = threading.Lock()
 
-    def is_streaming_payload(self, payload: Any) -> bool:
+    def is_streaming_payload(
+        self,
+        payload: Any,
+    ) -> bool:
         return False
 
     def validate_non_streaming_payload(self, payload: Any) -> None:
         del payload
 
-    def on_streaming_new_request(self, request_id: str, payload: Any) -> None:
+    def on_streaming_new_request(
+        self,
+        request_id: str,
+        payload: Any,
+    ) -> None:
         del request_id, payload
 
     def on_stream_chunk(
@@ -465,7 +472,11 @@ class StreamingSimpleScheduler:
                 self.emit_result(msg.request_id, result)
                 self.record_completed_non_streaming_request_id(msg.request_id)
 
-    def run_compute(self, payload: Any, loop: asyncio.AbstractEventLoop) -> Any:
+    def run_compute(
+        self,
+        payload: Any,
+        loop: asyncio.AbstractEventLoop,
+    ) -> object:
         if self.compute_fn is None:
             raise RuntimeError(
                 f"{self.__class__.__name__} does not support non-streaming compute"
@@ -483,7 +494,11 @@ class StreamingSimpleScheduler:
             )
         return item
 
-    def handle_streaming_new_request(self, request_id: str, payload: Any) -> None:
+    def handle_streaming_new_request(
+        self,
+        request_id: str,
+        payload: Any,
+    ) -> None:
         with self.abort_lock:
             self.aborted_request_ids.discard(request_id)
         with self.state_lock:

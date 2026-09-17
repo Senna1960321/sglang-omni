@@ -220,7 +220,7 @@ class RequestEventRecorder:
                     )
 
 
-def _json_default(obj: object) -> Any:
+def _json_default(obj: object) -> object:
     """Safe fallback for ``json.dumps``: summarise tensors, never materialise.
 
     Tensors / arrays return ``{__tensor_summary__, type, shape, dtype,

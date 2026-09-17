@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from sglang_omni.vendor.sglang.core import ServerArgs
 
 from sglang_omni.utils.gpu_compat import (
     get_visible_gpu_sm_version,
@@ -44,7 +47,9 @@ def _describe_sglang_runtime_configuration(
     )
 
 
-def init_sglang_cuda_graphs(model_worker: Any) -> None:
+def init_sglang_cuda_graphs(
+    model_worker: Any,
+) -> None:
     """Initialize SGLang graphs with Omni's prefill-embedding capture view."""
     from sglang.srt.hardware_backend.mlx.runtime import use_mlx
 
@@ -103,7 +108,7 @@ def _hidden_capture_max_tokens() -> int:
 
 
 def create_sglang_infrastructure(
-    server_args: Any,
+    server_args: "ServerArgs",
     gpu_id: int,
     *,
     tp_rank: int = 0,
@@ -239,7 +244,7 @@ def create_sglang_infrastructure(
 # decoder/vocoder setup, and other host-side staging should stay outside CUDA
 # graph coverage because graph replay will not amortize it.
 def create_sglang_infrastructure_defer_cuda_graph(
-    server_args: Any,
+    server_args: "ServerArgs",
     gpu_id: int,
     **kwargs: Any,
 ):

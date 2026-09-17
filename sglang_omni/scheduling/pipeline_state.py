@@ -68,7 +68,7 @@ class PipelineStateBase:
             data["engine_time_s"] = float(self.engine_time_s)
 
 
-def _tensor_to_list(value: object) -> Any:
+def _tensor_to_list(value: object) -> object:
     try:
         import torch
     except ImportError:
@@ -78,7 +78,10 @@ def _tensor_to_list(value: object) -> Any:
     return value
 
 
-def _tensor_from_list(value: Any, _default: object = None) -> torch.Tensor | None:
+def _tensor_from_list(
+    value: Any,
+    _default: object = None,
+) -> torch.Tensor | None:
     if value is None:
         return None
     import torch
@@ -92,7 +95,7 @@ class IndexableItems(Protocol):
     def __getitem__(self, index: int, /) -> object: ...
 
 
-def _tensor_items_to_lists(value: Iterable[object] | IndexableItems) -> list[Any]:
+def _tensor_items_to_lists(value: Iterable[object] | IndexableItems) -> list[object]:
     return [_tensor_to_list(item) for item in value]
 
 

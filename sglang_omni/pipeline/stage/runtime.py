@@ -543,7 +543,7 @@ class Stage:
         self,
         request_id: str,
         from_stage: str,
-        payload: Any,
+        payload: "StagePayload",
         replica_bindings: dict[str, int] | None = None,
     ) -> None:
         self._record_replica_bindings(request_id, replica_bindings)
@@ -554,7 +554,7 @@ class Stage:
         request_id: str,
         from_stage: str,
         chunk_id: int,
-        data: Any,
+        data: object,
         metadata: dict[str, Any] | None = None,
         replica_bindings: dict[str, int] | None = None,
     ) -> None:
@@ -596,7 +596,7 @@ class Stage:
         self,
         request_id: str,
         from_stage: str,
-        payload: Any,
+        payload: "StagePayload",
     ) -> None:
         if request_id in self._aborted:
             return
@@ -1289,7 +1289,11 @@ class Stage:
         if isinstance(transfer, KVPageTransfer) and transfer.lease is not None:
             transfer.lease.release()
 
-    async def _route_result(self, request_id: str, result: Any) -> None:
+    async def _route_result(
+        self,
+        request_id: str,
+        result: Any,
+    ) -> None:
         """Route a completed result to next stage(s) or complete at coordinator."""
         if not self._owns_external_io:
             self._clear_request_state(request_id)
@@ -1566,7 +1570,7 @@ class Stage:
     async def _send_stream_to_target(
         self,
         request_id: str,
-        data: Any,
+        data: object,
         target: str,
         metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -1776,7 +1780,7 @@ class Stage:
     async def _send_stream_to_coordinator(
         self,
         request_id: str,
-        data: Any,
+        data: object,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Forward a terminal stage's stream chunk to the Coordinator."""

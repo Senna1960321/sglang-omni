@@ -361,7 +361,7 @@ class Coordinator:
             timeout_s=timeout_s,
         )
 
-    async def submit(self, request_id: str, request: object) -> Any:
+    async def submit(self, request_id: str, request: object) -> object:
         """Submit a request to the pipeline and wait for completion."""
         await self._submit_request(request_id, request)
 

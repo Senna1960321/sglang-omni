@@ -15,7 +15,7 @@ import logging
 import queue as queue_mod
 from dataclasses import dataclass
 from multiprocessing.queues import Queue
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from sglang_omni.proto import (
     AbortMessage,
@@ -128,8 +128,8 @@ class TPFollowerControlPlane:
         *,
         stage_name: str,
         recv_endpoint: str = "",
-        work_queue: Any,
-        abort_queue: Any,
+        work_queue: Queue[TPWorkQueueMessage],
+        abort_queue: Queue[AbortMessage],
         admin_result_queue: Queue[AdminResultMessage] | None = None,
     ) -> None:
         self.stage_name = stage_name
