@@ -108,7 +108,7 @@ def _text_hidden_size(model: Qwen3ASRForConditionalGeneration) -> int:
 
 
 class Qwen3ASRPreLMEncoderService(
-    PreLMEncoderService[MultimodalDataItem, torch.Tensor, torch.Tensor]
+    PreLMEncoderService[MultimodalDataItem, torch.Tensor, torch.Tensor, torch.Tensor]
 ):
     """Encode before admission with single-flight deduplication and a CPU LRU."""
 

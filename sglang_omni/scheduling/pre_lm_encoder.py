@@ -12,11 +12,14 @@ import time
 from abc import ABC, abstractmethod
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
+
+from typing_extensions import Generic, TypeVar
 
 ItemT = TypeVar("ItemT")
 EncodedT = TypeVar("EncodedT")
 EmbeddingT = TypeVar("EmbeddingT")
+HostCopyT = TypeVar("HostCopyT", default=object)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ class QueueEntry(Generic[ItemT]):
     enqueued_at: float | None = None
 
 
-class PreLMEncoderService(ABC, Generic[ItemT, EncodedT, EmbeddingT]):
+class PreLMEncoderService(ABC, Generic[ItemT, EncodedT, EmbeddingT, HostCopyT]):
     """Run model-owned encoder hooks on a queue-backed worker thread."""
 
     def __init__(self, *, worker_name: str, max_queue_size: int = 0) -> None:
@@ -109,7 +112,7 @@ class PreLMEncoderService(ABC, Generic[ItemT, EncodedT, EmbeddingT]):
     def synchronize_batch(self) -> None:
         pass
 
-    def stage_host_copy(self, item: ItemT, embedding: EmbeddingT) -> Any | None:
+    def stage_host_copy(self, item: ItemT, embedding: EmbeddingT) -> HostCopyT | None:
         """Optionally copy embedding from GPU to CPU for the cache.
 
         Called for each item right after split_embeddings, while the encoder
@@ -130,7 +133,7 @@ class PreLMEncoderService(ABC, Generic[ItemT, EncodedT, EmbeddingT]):
         # TODO(Jeffro): once every service stages its own host copy via
         # stage_host_copy, drop this device-side embedding and cache host_copy only.
         embedding: EmbeddingT,
-        host_copy: Any | None = None,
+        host_copy: HostCopyT | None = None,
     ) -> None:
         pass
 
