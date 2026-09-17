@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, TypeVar
 
 from sglang_omni.models.ming_tts.payload_types import (
     MING_TTS_DEFAULT_MAX_DECODE_STEPS,
@@ -15,6 +16,8 @@ from sglang_omni.models.ming_tts.prompt_builder import build_ming_tts_prompt
 from sglang_omni.models.ming_tts.tokenizer import MingTTSTokenizerBundle
 from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.streaming_vocoder import INITIAL_CODEC_CHUNK_FRAMES_PARAM
+
+RequestValueT = TypeVar("RequestValueT")
 
 _REFERENCE_CONTRACT_ERROR = (
     "Ming-Omni-TTS currently supports only one local reference audio path "
@@ -68,7 +71,9 @@ def preprocess_ming_tts_payload(
             return {str(field) for field in raw}
         return set()
 
-    def first_present(*sources: dict[str, Any], names: tuple[str, ...]) -> Any | None:
+    def first_present(
+        *sources: Mapping[str, RequestValueT], names: tuple[str, ...]
+    ) -> RequestValueT | None:
         for source in sources:
             for name in names:
                 if source.get(name) is not None:
