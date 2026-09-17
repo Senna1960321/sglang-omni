@@ -8,6 +8,9 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
+    from sglang.srt.hardware_backend.mlx.tp_worker import MlxTpModelWorker
+
+    from sglang_omni.model_runner.model_worker import ModelWorker
     from sglang_omni.vendor.sglang.core import ServerArgs
 
 from sglang_omni.utils.gpu_compat import (
@@ -48,7 +51,7 @@ def _describe_sglang_runtime_configuration(
 
 
 def init_sglang_cuda_graphs(
-    model_worker: Any,
+    model_worker: "ModelWorker | MlxTpModelWorker",
 ) -> None:
     """Initialize SGLang graphs with Omni's prefill-embedding capture view."""
     from sglang.srt.hardware_backend.mlx.runtime import use_mlx

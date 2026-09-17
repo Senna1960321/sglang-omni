@@ -15,6 +15,9 @@ from sglang_omni.scheduling.types import (
 )
 
 if TYPE_CHECKING:
+    from sglang.srt.hardware_backend.mlx.model_runner_stub import (
+        _DummyModel as MlxDummyModel,
+    )
     from sglang.srt.managers.scheduler import GenerationBatchResult
 
 
@@ -29,7 +32,7 @@ class SGLangOutputProcessor:
         self,
         capture_hidden: bool = False,
         capture_hidden_layers: list[int] | None = None,
-        model: Any = None,
+        model: "torch.nn.Module | MlxDummyModel | None" = None,
         should_emit_hidden: Callable[[SchedulerRequest], bool] | None = None,
     ) -> None:
         self._capture_hidden = capture_hidden
