@@ -10,7 +10,7 @@ prefill, so this wrapper keeps only the text model and LM head.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -30,6 +30,7 @@ from sglang_omni.vendor.sglang.core import ForwardBatch
 
 if TYPE_CHECKING:
     from sglang.srt.model_executor.forward_batch_info import PPProxyTensors
+    from transformers import PretrainedConfig
 
 
 def _config_uses_mrope(config: object) -> bool:
@@ -46,7 +47,7 @@ class Qwen3OmniThinkerForCausalLM(nn.Module):
 
     def __init__(
         self,
-        config: Any,
+        config: "PretrainedConfig",
         quant_config: Optional[QuantizationConfig] = None,
         prefix: str = "",
     ) -> None:

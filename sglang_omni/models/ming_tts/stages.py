@@ -455,7 +455,7 @@ def _load_ming_tts_config(model_path: str) -> "PretrainedConfig":
     return AutoConfig.from_pretrained(model_path, trust_remote_code=False)
 
 
-def _resolve_context_length(config: Any) -> int:
+def _resolve_context_length(config: "PretrainedConfig") -> int:
     llm_config = config.llm_config
     value = getattr(llm_config, "max_position_embeddings", None)
     if value is None:
