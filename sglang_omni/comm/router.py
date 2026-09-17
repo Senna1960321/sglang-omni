@@ -372,7 +372,7 @@ class CommRouter:
         return list(self._relays.values())
 
 
-def _tensor_devices(obj: Any, seen: set[int] | None = None) -> set[str]:
+def _tensor_devices(obj: object, seen: set[int] | None = None) -> set[str]:
     if obj is None:
         return set()
     seen = set() if seen is None else seen

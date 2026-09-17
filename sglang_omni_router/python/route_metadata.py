@@ -7,7 +7,7 @@ import json
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, cast
+from typing import cast
 
 from fastapi import Request
 
@@ -787,7 +787,7 @@ def _has_explicit_speech_reference(payload: dict[str, JsonValue]) -> bool:
     return payload.get("ref_audio") is not None or bool(payload.get("references"))
 
 
-def _infer_message_part_capabilities(messages: Any) -> set[Capability]:
+def _infer_message_part_capabilities(messages: JsonValue) -> set[Capability]:
     capabilities: set[Capability] = set()
     if not isinstance(messages, list):
         return capabilities
