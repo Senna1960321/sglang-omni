@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import os
 from copy import copy
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple, TypeVar
 
 import torch
 from sglang.srt.distributed import get_pp_group, get_tensor_model_parallel_world_size
@@ -43,9 +43,11 @@ from sglang_omni.models.moss_tts.sampling_cuda_graph import (
 from sglang_omni.platforms import current_platform
 
 if TYPE_CHECKING:
-    from transformers import PretrainedConfig
+    from transformers import PretrainedConfig, Qwen3Config
 
 logger = logging.getLogger(__name__)
+
+ConfigInputT = TypeVar("ConfigInputT")
 
 
 class ChannelLogitsList(list[torch.Tensor | None]):
@@ -55,7 +57,7 @@ class ChannelLogitsList(list[torch.Tensor | None]):
     fused_audio: torch.Tensor | None = None
 
 
-def _as_qwen3_config(config: Any) -> Any:
+def _as_qwen3_config(config: ConfigInputT) -> Qwen3Config | ConfigInputT:
     from transformers import Qwen3Config
 
     if isinstance(config, Qwen3Config):
