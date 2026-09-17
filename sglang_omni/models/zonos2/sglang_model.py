@@ -10,7 +10,7 @@ backbone hidden states and exposes the head via :meth:`compute_logits`.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -30,6 +30,9 @@ from sglang_omni.vendor.sglang.layers import (
     get_moe_impl_class,
     get_rope,
 )
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
 
 _QK_NORM_EPS = 1e-6
 
@@ -210,7 +213,7 @@ class Zonos2SGLangModel(nn.Module):
 
     def __init__(
         self,
-        config: Any,
+        config: "PretrainedConfig",
         quant_config: QuantizationConfig | None = None,
         prefix: str = "",
     ) -> None:

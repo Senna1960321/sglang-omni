@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 from sglang.srt.layers.logits_processor import LogitsProcessorOutput
@@ -17,6 +17,9 @@ from torch import nn
 from sglang_omni.models.dots_tts.flow_head import DotsTTSFlowHead
 from sglang_omni.models.weight_loader import default_weight_loader
 
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
+
 
 class DotsTTSSGLangModel(nn.Module):
     """Keep AR execution in SGLang; add only dots-specific model operators."""
@@ -27,7 +30,7 @@ class DotsTTSSGLangModel(nn.Module):
 
     def __init__(
         self,
-        config: Any,
+        config: "PretrainedConfig",
         quant_config: QuantizationConfig | None = None,
         prefix: str = "",
     ) -> None:
