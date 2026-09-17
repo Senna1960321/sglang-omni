@@ -10,7 +10,6 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
 
 import torch
 from torch import Tensor
@@ -335,7 +334,7 @@ class MiniMaxMusic3AcousticScheduler(StreamingSimpleScheduler):
         self._stream_states: dict[str, _AcousticStreamState] = {}
         super().__init__(compute_fn=None, max_batch_size=1)
 
-    def is_streaming_payload(self, payload: Any) -> bool:
+    def is_streaming_payload(self, payload: object) -> bool:
         if not isinstance(payload, StagePayload):
             return False
         data = payload.data if isinstance(payload.data, dict) else {}

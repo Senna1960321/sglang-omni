@@ -140,7 +140,7 @@ def moss_transformers_processor_compat() -> Generator[None, None, None]:
         undo.append(("attr", obj, name, getattr(obj, name, missing)))
         setattr(obj, name, value)
 
-    def patch_item(mapping: dict, key: str, value: Any) -> None:
+    def patch_item(mapping: dict, key: str, value: object) -> None:
         undo.append(("item", mapping, key, mapping.get(key, missing)))
         mapping[key] = value
 

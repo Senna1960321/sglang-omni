@@ -39,7 +39,7 @@ class DelaySamplingOutput(NamedTuple):
     next_delay_state: torch.Tensor
 
 
-def matches_graph_profile(data: Any) -> bool:
+def matches_graph_profile(data: object) -> bool:
     """Return whether a request matches the profile baked into the graph."""
 
     text = ChannelSampling(

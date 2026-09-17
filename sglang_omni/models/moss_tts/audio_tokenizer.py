@@ -433,7 +433,11 @@ class MossAudioTokenizerTransformer(MossAudioTokenizerStreamingModule):
             for layer in self.layers
         )
 
-    def forward(self, x: torch.Tensor, **kwargs: Any) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        **kwargs: Any,
+    ) -> torch.Tensor:
         execution_context = kwargs.pop("execution_context", None)
         state = self._streaming_state
         if state is None and execution_context is not None:
@@ -565,7 +569,7 @@ class MossAudioTokenizerProjectedTransformer(nn.Module):
         *,
         input_lengths_cpu: Sequence[int] | None = None,
         execution_context: StreamingExecutionContext | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if execution_context is not None and not self.is_streaming:
             raise RuntimeError(
@@ -1101,7 +1105,10 @@ class _PatchedPretransform(nn.Module):
         return x, input_lengths * self.patch_size
 
 
-def _weight_normalized_conv1d(*args: Any, **kwargs: Any) -> nn.Module:
+def _weight_normalized_conv1d(
+    *args: Any,
+    **kwargs: Any,
+) -> nn.Module:
     return nn.utils.parametrizations.weight_norm(nn.Conv1d(*args, **kwargs))
 
 

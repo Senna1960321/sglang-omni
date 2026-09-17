@@ -44,7 +44,7 @@ def moss_tts_special_token_defaults(
     )
 
 
-def resolve_moss_audio_pad_code(config: Any) -> int:
+def resolve_moss_audio_pad_code(config: object) -> int:
     value = getattr(config, "audio_pad_code", None)
     if value is not None:
         return int(value)
