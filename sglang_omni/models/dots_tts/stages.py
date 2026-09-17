@@ -27,6 +27,7 @@ from sglang_omni.utils.checkpoint import resolve_checkpoint
 
 if TYPE_CHECKING:
     from dots_tts.models.dots_tts.config import ModelConfig
+    from transformers import PreTrainedTokenizerBase
 
 _DEFAULT_CONTEXT_LENGTH = 2048
 
@@ -106,8 +107,8 @@ def _reference_path(value: object) -> str | None:
 def preprocess_dots_tts_payload(
     payload: StagePayload,
     *,
-    tokenizer: Any,
-    model_config: Any,
+    tokenizer: "PreTrainedTokenizerBase",
+    model_config: "ModelConfig",
     max_generate_length: int,
     max_sequence_length: int,
     num_steps: int = 4,
@@ -348,7 +349,7 @@ def preprocess_dots_tts_payload(
 
 def _load_model_metadata(
     model_path: str,
-) -> tuple[str, ModelConfig, Any, int]:
+) -> tuple[str, "ModelConfig", "PreTrainedTokenizerBase", int]:
     import_dots_tts()
     from dots_tts.models.dots_tts.config import ModelConfig
     from transformers import AutoTokenizer
