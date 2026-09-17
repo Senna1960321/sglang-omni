@@ -18,7 +18,7 @@ import time
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import torch
@@ -288,7 +288,7 @@ class MingStreamingTalkerScheduler:
         self,
         request_id: str,
         state: _RequestState,
-        waveform: Any,
+        waveform: torch.Tensor,
         *,
         segment_id: int,
     ) -> None:
@@ -349,15 +349,15 @@ class MingStreamingTalkerScheduler:
     # ------------------------------------------------------------------ helpers
     @staticmethod
     def _extract_waveform(
-        item: object,
-    ) -> Any | None:
+        item: tuple[torch.Tensor, str | None, tuple[int, int] | None, float | None],
+    ) -> torch.Tensor | None:
         if isinstance(item, tuple):
             return item[0] if item else None
         return item
 
     @staticmethod
     def _waveform_numel(
-        waveform: Any,
+        waveform: torch.Tensor,
     ) -> int:
         if isinstance(waveform, torch.Tensor):
             return int(waveform.numel())
@@ -369,7 +369,7 @@ class MingStreamingTalkerScheduler:
 
     @staticmethod
     def _serialize_waveform(
-        waveform: Any,
+        waveform: torch.Tensor,
     ) -> tuple[bytes, list[int], str]:
         if isinstance(waveform, torch.Tensor):
             array = waveform.detach().cpu().float().numpy()

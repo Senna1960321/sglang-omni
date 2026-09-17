@@ -238,7 +238,7 @@ class MingTTSReferenceEncoder:
         padded[:, : int(waveform.shape[-1])] = waveform
         return padded
 
-    def _prepare_audio_vae_waveform(self, waveform: Any) -> torch.Tensor:
+    def _prepare_audio_vae_waveform(self, waveform: torch.Tensor) -> torch.Tensor:
         if not isinstance(waveform, torch.Tensor):
             waveform = torch.as_tensor(waveform)
         # Note (yzxiao): The official monolithic path reaches AudioVAE encode
