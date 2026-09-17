@@ -14,6 +14,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 from sglang_omni.models.moss_tts.audio_tokenizer import (
+    MossAudioTokenizerVocoder,
     MossAudioTokenizerVocoderDecoder,
     MossAudioVocoder,
 )
@@ -32,14 +33,16 @@ from sglang_omni.utils.audio_payload import audio_waveform_payload
 logger = logging.getLogger(__name__)
 
 
-def _codec_device(codec: Any, fallback: str) -> torch.device:
+def _codec_device(
+    codec: MossAudioTokenizerVocoder | None, fallback: str
+) -> torch.device:
     try:
         return next(codec.parameters()).device
     except (AttributeError, StopIteration):
         return torch.device(fallback)
 
 
-def _module_dtype(module: Any) -> torch.dtype | None:
+def _module_dtype(module: torch.nn.Module | None) -> torch.dtype | None:
     try:
         return next(
             parameter.dtype
