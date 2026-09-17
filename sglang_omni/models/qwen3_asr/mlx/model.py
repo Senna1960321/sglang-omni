@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Protocol, TypeAlias, Union
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -12,6 +12,17 @@ import numpy as np
 from mlx_lm.models.base import create_attention_mask, scaled_dot_product_attention
 
 from .config import AudioEncoderConfig, ModelConfig, TextConfig
+
+MlxQuantizedTensor: TypeAlias = tuple[mx.array, mx.array, mx.array]
+
+
+class MlxAttentionCache(Protocol):
+    @property
+    def offset(self) -> int: ...
+
+    def update_and_fetch(
+        self, keys: mx.array, values: mx.array, /
+    ) -> tuple[mx.array, mx.array] | tuple[MlxQuantizedTensor, MlxQuantizedTensor]: ...
 
 
 def _rope_safe(rope, x: mx.array, offset: int) -> mx.array:
@@ -359,7 +370,7 @@ class TextAttention(nn.Module):
         self,
         hidden_states: mx.array,
         mask: Optional[Union[str, mx.array]] = None,
-        cache: Optional[Any] = None,
+        cache: MlxAttentionCache | None = None,
     ) -> mx.array:
         B, L, _ = hidden_states.shape
 
@@ -442,7 +453,7 @@ class TextDecoderLayer(nn.Module):
         self,
         hidden_states: mx.array,
         mask: Optional[Union[str, mx.array]] = None,
-        cache: Optional[Any] = None,
+        cache: MlxAttentionCache | None = None,
     ) -> mx.array:
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
