@@ -6,10 +6,9 @@ from __future__ import annotations
 import logging
 import os
 import time
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
         CaptureHiddenMode,
         ForwardBatch,
     )
+    from sglang.srt.models.qwen3 import Qwen3ForCausalLM
 
     from sglang_omni.model_runner.model_worker import ModelWorker
     from sglang_omni.scheduling.sglang_backend.output_processor import (
@@ -43,19 +43,6 @@ _PROGRESS_LOG_DIVISOR = 10
 _SAMPLING_NAMESPACE = "minimax-ttm-ar"
 _FORCED_CODES_DIR_ENV = "MINIMAX_MUSIC3_FORCED_CODES"
 _HIDDEN_DUMP_DIR_ENV = "MINIMAX_MUSIC3_HIDDEN_DUMP"
-
-
-class MiniMaxMusic3Model(Protocol):
-    @property
-    def graph_feedback_buffer(self) -> torch.Tensor | None: ...
-
-    @property
-    def num_codebooks(self) -> int: ...
-
-    @property
-    def c0_logit_ids(self) -> torch.Tensor: ...
-
-    def get_input_embeddings(self) -> Callable[[torch.Tensor], torch.Tensor]: ...
 
 
 class _HiddenFrameBuffer:
@@ -116,7 +103,7 @@ class MiniMaxMusic3ARState:
 class MiniMaxMusic3ModelRunner(ModelRunner):
     """Own c0 sampling, RVQ depth decode and FM8 chunk streaming."""
 
-    model: MiniMaxMusic3Model
+    model: "Qwen3ForCausalLM"
     tp_worker: ModelWorker
 
     def __init__(
