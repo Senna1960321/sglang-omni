@@ -45,6 +45,10 @@ from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.audio import audio_fingerprint, load_audio
 
 if TYPE_CHECKING:
+    from sglang_omni.models.moss_tts.hf_loading import (
+        MossDelayReferences,
+        MossLoadedProcessor,
+    )
     from sglang_omni.scheduling.omni_scheduler import OmniScheduler
 
 logger = logging.getLogger(__name__)
@@ -107,7 +111,7 @@ def _audio_tokenizer_model_path_from_processor_dict(
 
 def _load_moss_processor(
     model_path: str,
-) -> Any:
+) -> "MossLoadedProcessor[MossDelayReferences]":
     logger.info(f"Loading MOSS-TTS processor from {model_path} without codec")
     try:
         with moss_transformers_processor_compat():

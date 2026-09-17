@@ -19,14 +19,19 @@ from sglang.srt.utils.hf_transformers import (
     get_context_length,
     get_hf_text_config,
 )
-from transformers import BatchFeature, PretrainedConfig
+from transformers import BatchFeature
 
 MOSS_TTS_DEFAULT_CONTEXT_LENGTH = 8192
 
 
+class MossAudioConfig(Protocol):
+    @property
+    def n_vq(self) -> int: ...
+
+
 class MossProcessorConfigSource(Protocol):
     @property
-    def model_config(self) -> PretrainedConfig: ...
+    def model_config(self) -> MossAudioConfig: ...
 
 
 MossAudioReference: TypeAlias = str | PathLike[str] | PathLike[bytes] | torch.Tensor
@@ -59,6 +64,14 @@ class MossRequestProcessor(Protocol[MossReferenceT]):
         *,
         mode: Literal["generation"] = "generation",
     ) -> BatchFeature: ...
+
+
+class MossLoadedProcessor(
+    MossRequestProcessor[MossReferenceT],
+    MossProcessorConfigSource,
+    Protocol[MossReferenceT],
+):
+    """Request processor with audio configuration."""
 
 
 def _validate_context_length_metadata(text_config: object) -> bool:

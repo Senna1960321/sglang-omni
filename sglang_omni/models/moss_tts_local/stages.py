@@ -53,6 +53,10 @@ from sglang_omni.scheduling.simple_scheduler import SimpleScheduler
 from sglang_omni.utils.cpu import bounded_intraop_threads
 
 if TYPE_CHECKING:
+    from sglang_omni.models.moss_tts.hf_loading import (
+        MossLoadedProcessor,
+        MossLocalReferences,
+    )
     from sglang_omni.scheduling.omni_scheduler import OmniScheduler
 
 logger = logging.getLogger(__name__)
@@ -208,7 +212,9 @@ def _normalize_processor_config(processor: object) -> None:
             setattr(model_config, attr, default)
 
 
-def _load_moss_tts_local_processor(model_path: str) -> Any:
+def _load_moss_tts_local_processor(
+    model_path: str,
+) -> "MossLoadedProcessor[MossLocalReferences]":
     logger.info(f"Loading MOSS-TTS Local processor from {model_path} without codec")
     try:
         from transformers import AutoConfig, AutoTokenizer
