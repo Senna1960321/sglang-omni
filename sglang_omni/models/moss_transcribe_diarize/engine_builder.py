@@ -19,6 +19,7 @@ from sglang_omni.scheduling.generation_batch_policy import (
 
 if TYPE_CHECKING:
     from sglang.srt.server_args import ServerArgs
+    from transformers import PreTrainedTokenizerBase
 
     from sglang_omni.models.moss_transcribe_diarize.request_builders import (
         MossTranscribeDiarizeRequestData,
@@ -87,7 +88,7 @@ class MossTranscribeDiarizeEngineBuilder(AsrEngineBuilder):
         self.request_build_max_pending = request_build_max_pending
         self.stream_emit_interval_s = stream_emit_interval_s
         self.processor: Any = None
-        self.tokenizer: Any = None
+        self.tokenizer: "PreTrainedTokenizerBase | None" = None
         self.audio_encoder_service: BatchedAudioEncoderService | None = None
         self.max_new_tokens = 0
         self.context_length = 0

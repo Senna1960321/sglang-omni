@@ -30,6 +30,8 @@ from sglang_omni.scheduling.token_text_streaming import (
 )
 
 if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+
     from sglang_omni.models.moss_transcribe_diarize.encoder_service import (
         BatchedAudioEncoderService,
     )
@@ -172,7 +174,9 @@ def _sampling_param(
 
 
 def _decode_token_ids(
-    tokenizer: Any, token_ids: list[int], skip_special_tokens: bool
+    tokenizer: "PreTrainedTokenizerBase",
+    token_ids: list[int],
+    skip_special_tokens: bool,
 ) -> str:
     try:
         return tokenizer.decode(
@@ -259,7 +263,7 @@ def _contiguous_offsets(input_ids: list[int], token_id: int) -> list[tuple[int, 
 
 def _prompt_token_parts(
     prompt: str,
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     audio_token: str,
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
     audio_token_count = prompt.count(audio_token)
@@ -332,7 +336,7 @@ def _extract_audio_features(
 
 def make_moss_transcribe_diarize_scheduler_adapters(
     processor: Any,
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     max_new_tokens: int,
     context_length: int,
     duration_scaled_default: bool = True,
@@ -593,7 +597,7 @@ def make_moss_transcribe_diarize_scheduler_adapters(
 
 
 def make_moss_transcribe_diarize_stream_output_builder(
-    tokenizer: Any,
+    tokenizer: "PreTrainedTokenizerBase",
     eos_token_id: int | None = None,
     min_emit_interval_s: float = 0.0,
 ) -> Callable[
