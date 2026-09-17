@@ -34,6 +34,11 @@ from sglang_omni.scheduling.types import ARRequestData, RequestOutput
 from sglang_omni.utils.audio_payload import audio_data_uri_from_reference
 
 if TYPE_CHECKING:
+    from sglang_omni.models.moss_tts.hf_loading import (
+        MossDelayReferences,
+        MossRequestProcessor,
+        MossUserMessage,
+    )
     from sglang_omni.models.moss_tts.sglang_model import MossTTSDelaySGLangModel
     from sglang_omni.models.moss_tts.stages import (
         _BatchedReferenceEncoder,
@@ -136,7 +141,7 @@ class MossTTSPreparedRequest:
 
 @dataclass
 class MossTTSPreprocessingContext:
-    processor: Any
+    processor: "MossRequestProcessor[MossDelayReferences]"
     reference_encoder: ReferenceEncoder | None = None
 
 
@@ -157,7 +162,9 @@ def _close_moss_tts_preprocessing_context(
 
 
 def set_moss_tts_preprocessing_context(
-    *, processor: Any, reference_encoder: ReferenceEncoder | None = None
+    *,
+    processor: "MossRequestProcessor[MossDelayReferences]",
+    reference_encoder: ReferenceEncoder | None = None,
 ) -> None:
     """Register the upstream MOSS processor used by preprocessing."""
 
@@ -453,10 +460,10 @@ def _reference_for_processor(
 
 
 def _build_processor_message(
-    processor: Any,
+    processor: "MossRequestProcessor[MossDelayReferences]",
     state: MossTTSState,
     reference_encoder: ReferenceEncoder | None = None,
-) -> dict[str, Any]:
+) -> "MossUserMessage":
     reference = _reference_for_processor(
         processor,
         state.ref_audio,
@@ -474,7 +481,7 @@ def _build_processor_message(
 def _prepare_moss_tts_request(
     payload: StagePayload,
     *,
-    processor: Any,
+    processor: "MossRequestProcessor[MossDelayReferences]",
     reference_encoder: ReferenceEncoder | None = None,
 ) -> MossTTSPreparedRequest:
     state = build_moss_tts_state(payload)

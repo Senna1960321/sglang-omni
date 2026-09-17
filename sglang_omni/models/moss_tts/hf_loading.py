@@ -9,15 +9,17 @@ import math
 from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from numbers import Integral, Real
-from typing import Any, Protocol
+from os import PathLike
+from typing import Any, Literal, Protocol, TypeAlias, TypeVar
 
+import torch
 from sglang.srt.utils.hf_transformers import (
     CONTEXT_LENGTH_KEYS,
     get_config,
     get_context_length,
     get_hf_text_config,
 )
-from transformers import PretrainedConfig
+from transformers import BatchFeature, PretrainedConfig
 
 MOSS_TTS_DEFAULT_CONTEXT_LENGTH = 8192
 
@@ -25,6 +27,38 @@ MOSS_TTS_DEFAULT_CONTEXT_LENGTH = 8192
 class MossProcessorConfigSource(Protocol):
     @property
     def model_config(self) -> PretrainedConfig: ...
+
+
+MossAudioReference: TypeAlias = str | PathLike[str] | PathLike[bytes] | torch.Tensor
+MossDelayReferences: TypeAlias = list[str | torch.Tensor | None]
+MossLocalReferences: TypeAlias = list[MossAudioReference | None]
+MossUserMessage: TypeAlias = dict[str, str | int | None | list[MossAudioReference]]
+MossReferenceT = TypeVar(
+    "MossReferenceT",
+    bound=MossDelayReferences | MossLocalReferences,
+    contravariant=True,
+)
+
+
+class MossRequestProcessor(Protocol[MossReferenceT]):
+    def build_user_message(
+        self,
+        text: str | None = None,
+        reference: MossReferenceT | None = None,
+        instruction: str | None = None,
+        tokens: int | None = None,
+        quality: str | None = None,
+        sound_event: str | None = None,
+        ambient_sound: str | None = None,
+        language: str | None = None,
+    ) -> MossUserMessage: ...
+
+    def __call__(
+        self,
+        conversations: list[list[MossUserMessage]],
+        *,
+        mode: Literal["generation"] = "generation",
+    ) -> BatchFeature: ...
 
 
 def _validate_context_length_metadata(text_config: object) -> bool:

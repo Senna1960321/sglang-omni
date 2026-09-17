@@ -43,7 +43,7 @@ from sglang_omni.models.moss_tts_local.payload_types import (
 from sglang_omni.models.moss_tts_local.state_pool import MossTTSLocalDecodeStatePool
 
 if TYPE_CHECKING:
-    from transformers import Qwen3Config
+    from transformers import GPT2Config, Qwen3Config
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ class MossTTSLocalSGLangModel(torch.nn.Module):
         return self._state_pool.row_for(rid)
 
     @staticmethod
-    def _cfg_get(config: Any, name: str, default: Any) -> Any:
+    def _cfg_get(config: "GPT2Config", name: str, default: int | float) -> Any:
         if isinstance(config, dict):
             value = config.get(name, default)
         else:

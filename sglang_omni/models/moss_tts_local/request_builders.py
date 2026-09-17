@@ -36,6 +36,11 @@ from sglang_omni.scheduling.types import ARRequestData
 if TYPE_CHECKING:
     from sglang.srt.managers.schedule_batch import Req
 
+    from sglang_omni.models.moss_tts.hf_loading import (
+        MossLocalReferences,
+        MossRequestProcessor,
+        MossUserMessage,
+    )
     from sglang_omni.models.moss_tts_local.sglang_model import MossTTSLocalSGLangModel
     from sglang_omni.models.moss_tts_local.stages import (
         _BatchedReferenceEncoder,
@@ -101,7 +106,7 @@ class MossTTSLocalPreparedRequest:
 
 @dataclass
 class _PreprocessingContext:
-    processor: Any
+    processor: "MossRequestProcessor[MossLocalReferences]"
     reference_encoder: ReferenceEncoder | None = None
 
 
@@ -112,7 +117,9 @@ MOSS_STREAM_TRANSPORT_BATCH_FRAMES = 5
 
 
 def set_moss_tts_local_preprocessing_context(
-    *, processor: Any, reference_encoder: ReferenceEncoder | None = None
+    *,
+    processor: "MossRequestProcessor[MossLocalReferences]",
+    reference_encoder: ReferenceEncoder | None = None,
 ) -> None:
     _QUEUE.set_context(
         _PreprocessingContext(processor=processor, reference_encoder=reference_encoder)
@@ -262,11 +269,12 @@ def build_generation_kwargs(
 
 
 def _build_processor_message(
-    processor: Any,
+    processor: "MossRequestProcessor[MossLocalReferences]",
     state: MossTTSLocalState,
     reference_encoder: ReferenceEncoder | None = None,
-) -> dict[str, Any]:
+) -> "MossUserMessage":
     ref_audio = state.ref_audio
+    reference: "MossLocalReferences | None"
     if reference_encoder is not None and isinstance(ref_audio, str):
         if _DATA_URI_RE.match(ref_audio) is None:
             reference = [reference_encoder.encode(ref_audio)]
@@ -287,7 +295,7 @@ def _build_processor_message(
 def _prepare_moss_tts_local_request(
     payload: StagePayload,
     *,
-    processor: Any,
+    processor: "MossRequestProcessor[MossLocalReferences]",
     reference_encoder: ReferenceEncoder | None = None,
 ) -> MossTTSLocalPreparedRequest:
     state = build_moss_tts_local_state(payload)
