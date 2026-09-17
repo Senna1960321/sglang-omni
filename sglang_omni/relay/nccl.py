@@ -92,7 +92,11 @@ class Connection:
     def get_agent_metadata(self) -> NcclAgentMetadata:
         return {"rank": self.rank, "engine_id": self.name}
 
-    def ensure_remote_agent(self, remote_engine_id: str, remote_meta_bytes: Any) -> int:
+    def ensure_remote_agent(
+        self,
+        remote_engine_id: str,
+        remote_meta_bytes: Any,
+    ) -> int:
         target_rank = remote_meta_bytes.get("rank", 0)
         if target_rank not in self.recv_ranks:
             logger.warning(
@@ -308,7 +312,7 @@ class NcclRelay(Relay):
 
     async def get_async(
         self,
-        metadata: Any,
+        metadata: dict[str, Any],
         dest_tensor: torch.Tensor,
         request_id: str | None = None,
         src_rank: int | None = None,
