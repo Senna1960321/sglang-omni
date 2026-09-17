@@ -71,7 +71,7 @@ class NpuDeviceGraphBackend:
     def capture(
         self,
         *,
-        pool: Any | None = None,
+        pool: tuple[int, int] | None = None,
         stream: Any | None = None,
         thread_local_errors: bool = False,
     ) -> Iterator[Any]:

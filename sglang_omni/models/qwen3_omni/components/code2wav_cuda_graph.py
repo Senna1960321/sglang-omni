@@ -116,7 +116,10 @@ class _CapturedGraph:
 CaptureAttemptResult: TypeAlias = (
     tuple[Literal["shrink"], list[GraphKey]]
     | tuple[Literal["disable"], tuple[dict[GraphKey, _CapturedGraph], str]]
-    | tuple[Literal["published"], tuple[dict[GraphKey, _CapturedGraph], object, object]]
+    | tuple[
+        Literal["published"],
+        tuple[dict[GraphKey, _CapturedGraph], tuple[int, int] | None, object],
+    ]
 )
 
 
@@ -203,7 +206,7 @@ class _TorchDeviceApi:
                 model(static_input)
         current_stream.wait_stream(stream)
 
-    def graph_pool_handle(self, device: torch.device) -> Any:
+    def graph_pool_handle(self, device: torch.device) -> tuple[int, int]:
         return self._module(device).graph_pool_handle()
 
     def capture(
@@ -211,7 +214,7 @@ class _TorchDeviceApi:
         model: Callable[[torch.Tensor], torch.Tensor],
         static_input: torch.Tensor,
         *,
-        pool: Any,
+        pool: tuple[int, int] | None,
         stream: Any,
     ) -> tuple[ReplayableGraph, torch.Tensor]:
         device = static_input.device
@@ -294,7 +297,7 @@ class Code2WavCudaGraphRunner:
         # per step, so they are cached and refreshed where the key set changes
         # (publish, rollback, runtime disable) instead of rescanned per call.
         self._sizes_by_frames: dict[int, tuple[int, ...]] = {}
-        self._pool: object = None
+        self._pool: tuple[int, int] | None = None
         self._capture_stream: object = None
         self._enabled = False
         self._disable_reason: str | None = None
@@ -453,7 +456,7 @@ class Code2WavCudaGraphRunner:
         problem, and the atomic tier stays published either way.
         """
         temporary: dict[GraphKey, _CapturedGraph] = {}
-        pool: Any | None = None
+        pool: tuple[int, int] | None = None
         capture_stream: Any | None = None
         violation_index: int | None = None
         combined_violation = False
@@ -609,7 +612,7 @@ class Code2WavCudaGraphRunner:
         self,
         key: GraphKey,
         *,
-        pool: Any,
+        pool: tuple[int, int] | None,
         stream: Any,
     ) -> _CapturedGraph:
         static_input = self._device_api.new_static_input(
