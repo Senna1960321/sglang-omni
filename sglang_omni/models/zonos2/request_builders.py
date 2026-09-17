@@ -10,8 +10,9 @@ from __future__ import annotations
 import base64
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -35,6 +36,9 @@ from sglang_omni.scheduling.streaming_vocoder import (
     INITIAL_CODEC_CHUNK_FRAMES_PARAM,
     resolve_initial_codec_chunk_frames,
 )
+
+if TYPE_CHECKING:
+    from sglang_omni.models.zonos2.sglang_model import Zonos2SGLangModel
 
 _DATA_URI_RE = re.compile(r"^data:[^;,]*;base64,(?P<data>.+)$", re.DOTALL)
 
@@ -171,7 +175,7 @@ def _marker_row(cfg, tok: int) -> torch.Tensor:
 
 
 def build_sglang_zonos2_request(
-    payload: StagePayload, *, model: Any
+    payload: StagePayload, *, model: "Zonos2SGLangModel"
 ) -> Zonos2SGLangRequestData:
     from sglang.srt.managers.schedule_batch import Req
     from sglang.srt.sampling.sampling_params import SamplingParams
@@ -255,7 +259,10 @@ def apply_sglang_zonos2_result(
     )
 
 
-def make_zonos2_scheduler_adapters(*, model: Any):
+def make_zonos2_scheduler_adapters(*, model: "Zonos2SGLangModel | None") -> tuple[
+    Callable[[StagePayload], Zonos2SGLangRequestData],
+    Callable[[Zonos2SGLangRequestData], StagePayload],
+]:
     def request_builder(payload: StagePayload) -> Zonos2SGLangRequestData:
         return build_sglang_zonos2_request(payload, model=model)
 
