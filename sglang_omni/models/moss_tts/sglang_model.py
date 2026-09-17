@@ -605,7 +605,7 @@ class MossTTSDelaySGLangModel(torch.nn.Module):
         return self._text_control_token_ids
 
     @staticmethod
-    def is_sampling_cuda_graph_compatible(data: Any) -> bool:
+    def is_sampling_cuda_graph_compatible(data: object) -> bool:
         """Return whether one request uses the captured sampling profile."""
 
         return matches_graph_profile(data)
