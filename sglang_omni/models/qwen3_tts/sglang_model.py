@@ -52,6 +52,11 @@ from sglang_omni.vendor.sglang.server_args import get_global_server_args
 
 if TYPE_CHECKING:
     from qwen_tts import Qwen3TTSTokenizer
+    from qwen_tts.core.models.configuration_qwen3_tts import (
+        Qwen3TTSConfig,
+        Qwen3TTSTalkerCodePredictorConfig,
+        Qwen3TTSTalkerConfig,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +225,12 @@ class _PredictorDecodeGraph:
 
 
 class Qwen3TTSTalkerDecoderLayer(nn.Module):
-    def __init__(self, config: Any, layer_id: int, prefix: str = "") -> None:
+    def __init__(
+        self,
+        config: "Qwen3TTSTalkerConfig | Qwen3TTSTalkerCodePredictorConfig",
+        layer_id: int,
+        prefix: str = "",
+    ) -> None:
         super().__init__()
         self.self_attn = Qwen3OmniMoeThinkerTextAttention(
             hidden_size=config.hidden_size,
@@ -272,7 +282,7 @@ class Qwen3TTSTalkerDecoderLayer(nn.Module):
 
 
 class Qwen3TTSTalkerTextModel(nn.Module):
-    def __init__(self, config: Any, prefix: str = "") -> None:
+    def __init__(self, config: "Qwen3TTSTalkerConfig", prefix: str = "") -> None:
         super().__init__()
         self.config = config
         self.codec_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
@@ -365,7 +375,7 @@ class Qwen3TTSTalkerTextModel(nn.Module):
 
 
 class Qwen3TTSCodePredictor(nn.Module):
-    def __init__(self, config: Any, prefix: str = "") -> None:
+    def __init__(self, config: "Qwen3TTSTalkerConfig", prefix: str = "") -> None:
         super().__init__()
         self.config = config
         cp_config = config.code_predictor_config
@@ -881,7 +891,10 @@ class Qwen3TTSTalker(Qwen3TTSPromptBuilderMixin, nn.Module):
     is_mrope_enabled = True
 
     def __init__(
-        self, config: Any, quant_config: object = None, prefix: str = ""
+        self,
+        config: "Qwen3TTSConfig | Qwen3TTSTalkerConfig",
+        quant_config: object = None,
+        prefix: str = "",
     ) -> None:
         del quant_config
         super().__init__()
@@ -1853,7 +1866,9 @@ class Qwen3TTSTalker(Qwen3TTSPromptBuilderMixin, nn.Module):
         )
 
     @staticmethod
-    def _resolve_predictor_rope_store(attn: Any, *, device: torch.device) -> bool:
+    def _resolve_predictor_rope_store(
+        attn: Qwen3OmniMoeThinkerTextAttention, *, device: torch.device
+    ) -> bool:
         """Resolve store support before capture: a supported CUDA head size
         does not imply CUDA dispatch when the backend override selects Torch."""
         return (
