@@ -213,7 +213,7 @@ class _TorchDeviceApi:
         *,
         pool: Any,
         stream: Any,
-    ) -> tuple[Any, torch.Tensor]:
+    ) -> tuple[ReplayableGraph, torch.Tensor]:
         device = static_input.device
         module = self._module(device)
         current_stream = module.current_stream(device)
@@ -268,7 +268,7 @@ class Code2WavCudaGraphRunner:
         device: str | torch.device,
         num_quantizers: int,
         graph_keys: tuple[GraphKey, ...],
-        device_api: Any,
+        device_api: _TorchDeviceApi,
     ) -> None:
         self._model = model
         self._device = torch.device(device)
@@ -316,7 +316,7 @@ class Code2WavCudaGraphRunner:
         num_quantizers: int,
         total_gpu_memory_fraction: float | None,
         graph_keys: tuple[GraphKey, ...],
-        device_api: Any | None = None,
+        device_api: _TorchDeviceApi | None = None,
     ) -> Code2WavCudaGraphRunner:
         """Build the configured serving-reachable serial graphs."""
 
