@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import os
 from copy import copy
-from typing import Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
 
 import torch
 from sglang.srt.distributed import get_pp_group, get_tensor_model_parallel_world_size
@@ -41,6 +41,9 @@ from sglang_omni.models.moss_tts.sampling_cuda_graph import (
     MossTTSDelaySamplingCudaGraphRunner,
 )
 from sglang_omni.platforms import current_platform
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +88,7 @@ class MossTTSDelaySGLangModel(torch.nn.Module):
 
     def __init__(
         self,
-        config: Any,
+        config: "PretrainedConfig",
         quant_config: Optional[QuantizationConfig] = None,
         prefix: str = "",
     ) -> None:
@@ -175,7 +178,7 @@ class MossTTSDelaySGLangModel(torch.nn.Module):
         self._decode_input_embedding.weight.requires_grad_(False)
 
     @staticmethod
-    def _normalize_config(config: Any) -> Any:
+    def _normalize_config(config: "PretrainedConfig") -> "PretrainedConfig":
         language_config = _as_qwen3_config(getattr(config, "language_config", None))
         config.language_config = language_config
         config.hidden_size = int(
@@ -334,7 +337,9 @@ class MossTTSDelaySGLangModel(torch.nn.Module):
         )
 
     @staticmethod
-    def _make_logits_processor(config: Any, channel: int) -> LogitsProcessor:
+    def _make_logits_processor(
+        config: "PretrainedConfig", channel: int
+    ) -> LogitsProcessor:
         """Per-channel LogitsProcessor sized to that channel's own vocab.
 
         sglang's ``_get_logits`` slices the head output to ``config.vocab_size``
