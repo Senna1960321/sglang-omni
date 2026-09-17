@@ -12,7 +12,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import torch
 
@@ -40,6 +40,8 @@ from sglang_omni.scheduling.streaming_vocoder import (
 if TYPE_CHECKING:
     from sglang_omni.models.zonos2.sglang_model import Zonos2SGLangModel
 
+RefAudioT = TypeVar("RefAudioT")
+
 _DATA_URI_RE = re.compile(r"^data:[^;,]*;base64,(?P<data>.+)$", re.DOTALL)
 
 _SAMPLING_FIELDS = (
@@ -51,7 +53,7 @@ _SAMPLING_FIELDS = (
 )
 
 
-def ref_audio_to_encoder_input(ref_audio: Any) -> Any:
+def ref_audio_to_encoder_input(ref_audio: RefAudioT) -> RefAudioT | bytes:
     """Decode a base64 data-URI reference to raw bytes; pass paths/arrays through."""
     if isinstance(ref_audio, str):
         m = _DATA_URI_RE.match(ref_audio)
