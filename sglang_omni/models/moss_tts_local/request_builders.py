@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import torch
+from transformers import PretrainedConfig
 
 from sglang_omni.models.moss_tts.audio_tokenizer import (
     _STREAMING_ROPE_CACHE_DURATION_SECONDS,
@@ -67,7 +68,7 @@ class MossTTSLocalSGLangRequestData(ARRequestData):
     input_embeds_are_projected: bool = False
     stage_payload: StagePayload | None = None
     state: MossTTSLocalState = field(default_factory=MossTTSLocalState)
-    model_config: Any = None
+    model_config: PretrainedConfig | None = None
     prompt_rows: torch.Tensor | None = None
     output_rows: list[torch.Tensor] = field(default_factory=list)
     # note (Yue Yin): checkpoint generate() defaults — the continue/stop head samples at

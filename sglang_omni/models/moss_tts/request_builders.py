@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import torch
 from sglang.srt.managers.schedule_batch import Req
 from sglang.srt.sampling.sampling_params import SamplingParams
+from transformers import PretrainedConfig
 
 from sglang_omni.models.moss_tts.payload_types import (
     AUDIO_REPETITION_PENALTY,
@@ -94,7 +95,7 @@ class MossTTSSGLangRequestData(ARRequestData):
     input_embeds_are_projected: bool = False
     stage_payload: StagePayload | None = None
     state: MossTTSState = field(default_factory=MossTTSState)
-    model_config: Any = None
+    model_config: PretrainedConfig | None = None
     prompt_rows: torch.Tensor | None = None
     assistant_prefix_rows: torch.Tensor | None = None
     output_rows: list[torch.Tensor] = field(default_factory=list)
@@ -536,7 +537,7 @@ def _last_equal(rows: torch.Tensor, value: int) -> int:
 
 
 def _resolve_audio_payload_bounds(
-    rows: torch.Tensor, cfg: Any
+    rows: torch.Tensor, cfg: PretrainedConfig
 ) -> tuple[int, int] | None:
     text = rows[:, 0].to(dtype=torch.long)
     bos_pos = (text == int(cfg.audio_start_token_id)).nonzero(as_tuple=False)
