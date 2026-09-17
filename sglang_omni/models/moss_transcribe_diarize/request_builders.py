@@ -30,7 +30,7 @@ from sglang_omni.scheduling.token_text_streaming import (
 )
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedTokenizerBase
+    from transformers import PreTrainedTokenizerBase, ProcessorMixin
 
     from sglang_omni.models.moss_transcribe_diarize.encoder_service import (
         BatchedAudioEncoderService,
@@ -192,7 +192,7 @@ def postprocess_moss_transcribe_diarize_text(text: str) -> str:
     return _SPECIAL_TOKEN_RE.sub("", text).strip()
 
 
-def _render_prompt(processor: Any, input_text: str) -> str:
+def _render_prompt(processor: "ProcessorMixin", input_text: str) -> str:
     messages = [
         {
             "role": "user",
@@ -211,7 +211,7 @@ def _render_prompt(processor: Any, input_text: str) -> str:
 
 def _prompt_from_payload(
     payload: StagePayload,
-    processor: Any,
+    processor: "ProcessorMixin",
     *,
     default_prompt: str | None = None,
 ) -> str:
