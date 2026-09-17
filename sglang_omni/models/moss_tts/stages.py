@@ -186,7 +186,9 @@ class _BatchedReferenceEncoder:
             self._queue.put(_MOSS_TTS_REFERENCE_ENCODE_STOP)
         self._thread.join(timeout=5.0)
 
-    def load(self, source: str | os.PathLike[str]) -> _LoadedReferenceWaveform:
+    def load(
+        self, source: str | bytes | os.PathLike[str] | os.PathLike[bytes]
+    ) -> _LoadedReferenceWaveform:
         with self._lifecycle_lock:
             if self._closed:
                 raise RuntimeError("MOSS-TTS reference encoder is closed")
@@ -305,7 +307,7 @@ class _BatchedReferenceEncoder:
 
 def _load_reference_waveform(
     audio_encoder: MossAudioEncoder,
-    source: str | os.PathLike[str],
+    source: str | bytes | os.PathLike[str] | os.PathLike[bytes],
 ) -> _LoadedReferenceWaveform:
     """Load once through the shared resolver and key the exact codec input."""
 
@@ -357,7 +359,16 @@ class _MossTTSReferenceEncodeHook(TensorReferenceEncodeHook[_LoadedReferenceWave
         )
         self.encoder_config_hash = hash_bytes(config.encode("utf-8"))
 
-    def normalize_input(self, raw_input: Any) -> _LoadedReferenceWaveform:
+    def normalize_input(
+        self,
+        raw_input: (
+            _LoadedReferenceWaveform
+            | str
+            | bytes
+            | os.PathLike[str]
+            | os.PathLike[bytes]
+        ),
+    ) -> _LoadedReferenceWaveform:
         if isinstance(raw_input, _LoadedReferenceWaveform):
             return raw_input
         # The service needs content identity before lookup; derive it only after
