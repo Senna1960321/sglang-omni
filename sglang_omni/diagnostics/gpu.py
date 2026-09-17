@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Mapping
+from types import ModuleType
 from typing import Any, TypedDict, TypeVar
 
 from sglang_omni.utils.gpu_memory import (
@@ -164,7 +165,7 @@ def _cuda_runtime_version() -> str | None:
 
 
 def _nvml_inventory(
-    pynvml: Any | None,
+    pynvml: ModuleType | None,
 ) -> tuple[list[dict[str, int | str | None]], dict[str, str | None], list[str]]:
     system: dict[str, str | None] = {
         "driver_version": None,
@@ -342,7 +343,7 @@ def collect_gpu_diagnostics(
     *,
     env: Mapping[str, str] | None = None,
     torch_module: Any | None = None,
-    pynvml_module: Any | None = None,
+    pynvml_module: ModuleType | None = None,
 ) -> dict[str, Any]:
     """Collect diagnostics without loading model configuration or weights."""
 

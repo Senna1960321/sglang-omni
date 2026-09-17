@@ -7,11 +7,10 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
-from transformers import AutoConfig
+from transformers import AutoConfig, PretrainedConfig
 
 try:
     from transformers.initialization import no_init_weights
@@ -232,7 +231,7 @@ def load_hf_config(
     *,
     trust_remote_code: bool = True,
     local_files_only: bool = True,
-) -> Any:
+) -> PretrainedConfig:
     """Load the HF config, preferring the local cache."""
     try:
         config_path = cached_file(
