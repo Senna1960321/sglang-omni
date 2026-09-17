@@ -6,7 +6,7 @@ from __future__ import annotations
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -14,6 +14,7 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.messages import OutgoingMessage
 from sglang_omni.scheduling.pipeline_state import store_state
 from sglang_omni.scheduling.sglang_backend import SGLangARRequestData
+from sglang_omni.scheduling.types import RequestOutput
 
 from .constants import MAX_PROMPT_TOKENS
 from .payload_types import MiniMaxMusic3State
@@ -137,7 +138,7 @@ def build_sglang_minimax_request(
 
 
 def build_stream_output(
-    request_id: str, data: MiniMaxMusic3SGLangRequestData, req_output: Any
+    request_id: str, data: MiniMaxMusic3SGLangRequestData, req_output: RequestOutput
 ) -> Iterator[OutgoingMessage]:
     del req_output
     yield from _drain_pending_chunks(request_id, data)
