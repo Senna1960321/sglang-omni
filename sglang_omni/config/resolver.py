@@ -193,7 +193,7 @@ def _diff(expected: Any, actual: Any, prefix: str) -> list[ConfigDifference]:
     return []
 
 
-def _is_named_list(value: Any) -> bool:
+def _is_named_list(value: object) -> bool:
     return (
         isinstance(value, list)
         and bool(value)

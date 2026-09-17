@@ -359,7 +359,7 @@ class ConfigPath:
     # values
     # ------------------------------------------------------------------
 
-    def coerce(self, value: object) -> Any:
+    def coerce(self, value: object) -> object:
         """Convert a raw (usually textual) value into this path's declared type.
 
         Numeric conversions only go the lossless way: an int fits a float
@@ -427,7 +427,7 @@ class ConfigPath:
                 raw=self.raw,
             )
 
-    def read(self, source: BaseModel | dict[str, Any]) -> Any:
+    def read(self, source: BaseModel | dict[str, Any]) -> object:
         """Read the value at this path from a config instance or a dumped dict."""
         current: object = source
         if isinstance(current, BaseModel):
