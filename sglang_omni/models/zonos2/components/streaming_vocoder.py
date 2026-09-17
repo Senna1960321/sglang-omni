@@ -11,6 +11,7 @@ the delay/flush tail until ``stream_done``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -211,7 +212,7 @@ class Zonos2StreamingVocoderScheduler(StreamingVocoderBase[_Zonos2StreamState, N
         overlap_frames: int = _STREAM_OLA_OVERLAP_FRAMES,
         max_batch_size: int = 1,
         max_batch_wait_ms: int = 0,
-        request_cost_fn: Any = None,
+        request_cost_fn: Callable[[StagePayload], int] | None = None,
         max_batch_cost: int | None = None,
     ) -> None:
         if steady_chunk_frames <= 0:
