@@ -10,11 +10,12 @@ import os
 import re
 import tempfile
 import time
+from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Literal, Protocol, TypedDict
 
 import numpy as np
 
@@ -558,7 +559,10 @@ def _safetensors_safe_open() -> SafeOpenMetadata:
     return safe_open
 
 
-def _safetensors_load_file() -> Any:
+def _safetensors_load_file() -> Callable[
+    [str | os.PathLike[str] | os.PathLike[bytes]],
+    dict[str, np.ndarray[tuple[int, ...], np.dtype[np.generic]]],
+]:
     try:
         from safetensors.numpy import load_file
     except ImportError as exc:
