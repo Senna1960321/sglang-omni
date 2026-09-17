@@ -32,10 +32,11 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Mapping
-from typing import Any, Generic, TypeVar
+from collections.abc import Callable, Coroutine, Mapping
+from typing import Any
 
 import torch
+from typing_extensions import Generic, TypeVar
 
 from sglang_omni.pipeline.stage.stream_queue import StreamItem
 from sglang_omni.proto import StagePayload
@@ -52,9 +53,6 @@ _COMPLETED_STREAM_REQUEST_ID_RETAINED = 5000
 
 StreamStateT = TypeVar("StreamStateT")
 StepPlanT = TypeVar("StepPlanT")
-ComputeInputT = TypeVar("ComputeInputT")
-ComputeResultT = TypeVar("ComputeResultT")
-RequestCostInputT = TypeVar("RequestCostInputT")
 
 
 def resolve_initial_codec_chunk_frames(
@@ -85,7 +83,7 @@ def resolve_initial_codec_chunk_frames(
 
 
 class StreamingVocoderBase(
-    StreamingSimpleScheduler, ABC, Generic[StreamStateT, StepPlanT]
+    StreamingSimpleScheduler[StagePayload], ABC, Generic[StreamStateT, StepPlanT]
 ):
     """Template-method base for streaming vocoder schedulers.
 
@@ -106,15 +104,21 @@ class StreamingVocoderBase(
 
     def __init__(
         self,
-        compute_fn: Callable[[ComputeInputT], ComputeResultT] | None,
+        compute_fn: Callable[[StagePayload], object] | None,
         *,
         sample_rate: int,
         stream_source_hint: str | None = None,
         stream_input_modality: str = "audio_codes",
-        batch_compute_fn: Callable[[list[Any]], list[Any]] | None = None,
+        batch_compute_fn: (
+            Callable[
+                [list[StagePayload]],
+                list[Any] | Coroutine[object, None, list[Any]],
+            ]
+            | None
+        ) = None,
         max_batch_size: int = 1,
         max_batch_wait_ms: int = 0,
-        request_cost_fn: Callable[[RequestCostInputT], int] | None = None,
+        request_cost_fn: Callable[[StagePayload], int] | None = None,
         max_batch_cost: int | None = None,
         abort_callback: Callable[[str], None] | None = None,
     ) -> None:

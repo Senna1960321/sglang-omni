@@ -279,7 +279,7 @@ def _build_audio_chunk_payload(
     )
 
 
-class S2ProVocoderScheduler(StreamingSimpleScheduler):
+class S2ProVocoderScheduler(StreamingSimpleScheduler[StagePayload]):
     """Fish S2-Pro vocoder scheduler with streaming and batch final paths."""
 
     def __init__(

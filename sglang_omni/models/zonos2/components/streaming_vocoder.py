@@ -205,7 +205,7 @@ class Zonos2StreamingVocoderScheduler(StreamingVocoderBase[_Zonos2StreamState, N
         self,
         *,
         device: str = "cuda",
-        compute_fn: Any = None,
+        compute_fn: Callable[[StagePayload], object] | None = None,
         batch_compute_fn: Any = None,
         steady_chunk_frames: int = _STREAM_STEADY_CHUNK_FRAMES,
         initial_chunk_frames: int = _STREAM_INITIAL_CHUNK_FRAMES,
