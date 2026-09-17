@@ -15,7 +15,7 @@ from contextlib import AbstractContextManager
 from copy import deepcopy
 from dataclasses import dataclass
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Literal, Protocol, TypeAlias, TypedDict
 
 import torch
 
@@ -118,7 +118,9 @@ CaptureAttemptResult: TypeAlias = (
     | tuple[Literal["disable"], tuple[dict[GraphKey, _CapturedGraph], str]]
     | tuple[
         Literal["published"],
-        tuple[dict[GraphKey, _CapturedGraph], tuple[int, int] | None, object],
+        tuple[
+            dict[GraphKey, _CapturedGraph], tuple[int, int] | None, torch.Stream | None
+        ],
     ]
 )
 
@@ -186,7 +188,7 @@ class _TorchDeviceApi:
     ) -> torch.Tensor:
         return torch.zeros(shape, dtype=torch.long, device=device)
 
-    def new_stream(self, device: torch.device) -> Any:
+    def new_stream(self, device: torch.device) -> torch.Stream:
         return self._module(device).Stream(device=device)
 
     def warmup(
@@ -196,7 +198,7 @@ class _TorchDeviceApi:
         *,
         iterations: int,
         device: torch.device,
-        stream: Any,
+        stream: torch.Stream,
     ) -> None:
         module = self._module(device)
         current_stream = module.current_stream(device)
@@ -215,7 +217,7 @@ class _TorchDeviceApi:
         static_input: torch.Tensor,
         *,
         pool: tuple[int, int] | None,
-        stream: Any,
+        stream: torch.Stream,
     ) -> tuple[ReplayableGraph, torch.Tensor]:
         device = static_input.device
         module = self._module(device)
@@ -298,7 +300,7 @@ class Code2WavCudaGraphRunner:
         # (publish, rollback, runtime disable) instead of rescanned per call.
         self._sizes_by_frames: dict[int, tuple[int, ...]] = {}
         self._pool: tuple[int, int] | None = None
-        self._capture_stream: object = None
+        self._capture_stream: torch.Stream | None = None
         self._enabled = False
         self._disable_reason: str | None = None
         self._build_stats: dict[str, int] = {
@@ -457,7 +459,7 @@ class Code2WavCudaGraphRunner:
         """
         temporary: dict[GraphKey, _CapturedGraph] = {}
         pool: tuple[int, int] | None = None
-        capture_stream: Any | None = None
+        capture_stream: torch.Stream | None = None
         violation_index: int | None = None
         combined_violation = False
         tier1_abandoned = False
@@ -613,7 +615,7 @@ class Code2WavCudaGraphRunner:
         key: GraphKey,
         *,
         pool: tuple[int, int] | None,
-        stream: Any,
+        stream: torch.Stream,
     ) -> _CapturedGraph:
         static_input = self._device_api.new_static_input(
             (key.batch_size, self._num_quantizers, key.frames),

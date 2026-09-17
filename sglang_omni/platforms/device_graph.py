@@ -72,7 +72,7 @@ class NpuDeviceGraphBackend:
         self,
         *,
         pool: tuple[int, int] | None = None,
-        stream: Any | None = None,
+        stream: torch.Stream | None = None,
         thread_local_errors: bool = False,
     ) -> Iterator[Any]:
         graph = torch.npu.NPUGraph()
