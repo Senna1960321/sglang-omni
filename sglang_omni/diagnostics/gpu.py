@@ -279,7 +279,7 @@ def _physical_device(
 
 
 def _logical_devices(
-    torch: Any,
+    torch: ModuleType,
     visible_devices: list[int | str],
     inventory: list[InventoryDevice],
     warnings: list[str],
@@ -342,7 +342,7 @@ def _logical_devices(
 def collect_gpu_diagnostics(
     *,
     env: Mapping[str, str] | None = None,
-    torch_module: Any | None = None,
+    torch_module: ModuleType | None = None,
     pynvml_module: ModuleType | None = None,
 ) -> dict[str, Any]:
     """Collect diagnostics without loading model configuration or weights."""

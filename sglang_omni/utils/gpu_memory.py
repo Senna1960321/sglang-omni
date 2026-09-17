@@ -13,7 +13,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ctypes import _Pointer as Pointer
+
+    from pynvml import struct_c_nvmlDevice_t
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +317,9 @@ def _try_import_pynvml() -> ModuleType | None:
         return None
 
 
-def _get_device_handle(pynvml: Any, device_id: int | str) -> Any:
+def _get_device_handle(
+    pynvml: ModuleType, device_id: int | str
+) -> "Pointer[struct_c_nvmlDevice_t]":
     if isinstance(device_id, int):
         return pynvml.nvmlDeviceGetHandleByIndex(device_id)
 
@@ -329,7 +336,7 @@ def _decode_nvml_string(value: str | bytes) -> str:
     return value
 
 
-def _shutdown_nvml(pynvml: Any) -> None:
+def _shutdown_nvml(pynvml: ModuleType) -> None:
     try:
         pynvml.nvmlShutdown()
     except Exception:
