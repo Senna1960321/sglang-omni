@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.managers.scheduler import GenerationBatchResult
@@ -16,6 +16,7 @@ from sglang_omni.models.ming_tts.engine_io import MingTTSLatentPatch
 from sglang_omni.models.ming_tts.sglang_model import MingTTSTailInputs
 
 if TYPE_CHECKING:
+    from sglang.srt.distributed.parallel_state import GroupCoordinator
     from sglang.srt.managers.schedule_batch import ScheduleBatch
     from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 
@@ -521,7 +522,7 @@ class MingTTSModelRunner(ModelRunner):
             dist_group = getattr(tp_group, "group", None)
         dist.broadcast(tensor, src=src_rank, group=dist_group)
 
-    def _get_tp_group(self) -> Any:
+    def _get_tp_group(self) -> "GroupCoordinator | None":
         getter = getattr(self.tp_worker, "get_tp_group", None)
         if callable(getter):
             return getter()
