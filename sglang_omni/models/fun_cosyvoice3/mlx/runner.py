@@ -48,7 +48,7 @@ class FunCosyVoice3MlxModelRunner:
         )
         self._trunk = None
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
         self._cosyvoice3_prompt_lengths: dict[str, int] = {}
         self._cosyvoice3_min_lengths: dict[str, int] = {}
@@ -58,7 +58,9 @@ class FunCosyVoice3MlxModelRunner:
         self._cosyvoice3_sampling_pending_tokens: mx.array | None = None
 
     @staticmethod
-    def _request_prompt(req: Any) -> tuple[list[int], list[int]]:
+    def _request_prompt(
+        req: Any,
+    ) -> tuple[list[int], list[int]]:
         text_ids = getattr(req, "_cosyvoice3_text_token_ids", None)
         prompt_ids = getattr(req, "_cosyvoice3_prompt_speech_token_ids", None)
         if text_ids is None or prompt_ids is None:

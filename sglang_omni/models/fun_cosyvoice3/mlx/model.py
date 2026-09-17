@@ -149,7 +149,7 @@ def _load_converted_backbone(
         if bits not in (2, 3, 4, 6, 8):
             raise ValueError(f"unsupported MLX quantization bits: {bits}")
 
-        def quantize_layers(path: str, module: Any) -> bool:
+        def quantize_layers(path: str, module: nn.Module) -> bool:
             return (
                 isinstance(module, nn.Linear)
                 and "layers" in path
@@ -187,7 +187,7 @@ def _quantize_loaded_backbone(
             f"{sorted(_MLX_QUANTIZATION_PRESETS)}, got {quantization!r}"
         ) from exc
 
-    def quantize_layers(path: str, module: Any) -> bool:
+    def quantize_layers(path: str, module: nn.Module) -> bool:
         return (
             isinstance(module, nn.Linear)
             and "layers" in path

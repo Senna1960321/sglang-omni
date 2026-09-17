@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.layers.logits_processor import LogitsProcessorOutput
@@ -121,7 +121,7 @@ class DotsTTSSGLangModel(nn.Module):
         positions: torch.Tensor,
         forward_batch: ForwardBatch,
         input_embeds: torch.Tensor | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> LogitsProcessorOutput:
         del kwargs
         if (
