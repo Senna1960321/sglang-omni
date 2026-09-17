@@ -15,6 +15,7 @@ import os
 import queue as _queue_mod
 import threading
 import time
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -259,7 +260,11 @@ class MingStreamingTalkerScheduler:
 
     def _build_generation_iterator(
         self, text: str, abort_event: threading.Event
-    ) -> Any:
+    ) -> Generator[
+        tuple[torch.Tensor, str | None, tuple[int, int] | None, float | None],
+        None,
+        None,
+    ]:
         if hasattr(self._talker, "omni_audio_generation"):
             return self._talker.omni_audio_generation(
                 tts_text=text,

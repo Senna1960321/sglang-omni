@@ -39,6 +39,7 @@ from sglang_omni.utils.audio_payload import audio_waveform_payload
 from sglang_omni.utils.cuda_staging import GrowablePinnedBuffer, PinnedTransferSlot
 
 if TYPE_CHECKING:
+    import numpy as np
     from qwen_tts import Qwen3TTSTokenizer
     from qwen_tts.core.tokenizer_12hz.modeling_qwen3_tts_tokenizer_v2 import (
         Qwen3TTSTokenizerV2Decoder,
@@ -2993,7 +2994,7 @@ class Qwen3TTSStreamingVocoderScheduler(
         self,
         payload: StagePayload,
         state: Qwen3TTSState,
-        waveform: Any,
+        waveform: "np.ndarray[tuple[int, ...], np.dtype[np.float32]] | None",
         sample_rate: int,
     ) -> StagePayload:
         if waveform is None:

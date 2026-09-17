@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 from sglang.srt.managers.schedule_batch import FINISH_MATCHED_TOKEN
@@ -585,7 +585,9 @@ class HiggsTTSModelRunner(ModelRunner):
         return any(self._request_captures_rollout_logprobs(req) for req in requests)
 
     @staticmethod
-    def _append_output_code(data: Any, codes_N: torch.Tensor) -> torch.Tensor:
+    def _append_output_code(
+        data: "HiggsSGLangRequestData", codes_N: torch.Tensor
+    ) -> torch.Tensor:
         try:
             max_new_tokens = int(data.max_new_tokens)
             num_codebooks = int(data.num_codebooks)
@@ -695,7 +697,7 @@ class HiggsTTSModelRunner(ModelRunner):
             req.finished_reason = FINISH_MATCHED_TOKEN(EOC_ID)
 
     @staticmethod
-    def _is_final_code_step(data: Any) -> bool:
+    def _is_final_code_step(data: "HiggsSGLangRequestData") -> bool:
         if bool(data.generation_done):
             return True
         try:

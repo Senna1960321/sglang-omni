@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Protocol
 
 import torch
 
@@ -30,7 +30,7 @@ class PrefillInputIds(Protocol):
 
 
 def collect_s2pro_step_outputs(
-    result: Any,
+    result: GenerationBatchResult,
     requests: list[SchedulerRequest],
     *,
     output_codes: torch.Tensor,
@@ -265,7 +265,7 @@ class FishS2ProModelRunner(ModelRunner):
         return text_embeds
 
     def _collect_step_outputs(
-        self, result: Any, requests: list[SchedulerRequest]
+        self, result: GenerationBatchResult, requests: list[SchedulerRequest]
     ) -> None:
         collect_s2pro_step_outputs(
             result,
