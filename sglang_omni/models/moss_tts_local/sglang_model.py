@@ -29,6 +29,7 @@ from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTe
 from sglang.srt.model_loader.weight_utils import default_weight_loader
 from sglang.srt.models.qwen3 import Qwen3Model
 from sglang.srt.utils import add_prefix
+from transformers import PretrainedConfig
 
 from sglang_omni.models.moss_tts.sampling_kernels import (
     MAX_FUSED_SAMPLE_VOCAB,
@@ -66,7 +67,7 @@ class MossTTSLocalSGLangModel(torch.nn.Module):
 
     def __init__(
         self,
-        config: Any,
+        config: PretrainedConfig,
         quant_config: Optional[QuantizationConfig] = None,
         prefix: str = "",
     ) -> None:
@@ -166,7 +167,7 @@ class MossTTSLocalSGLangModel(torch.nn.Module):
         return default if value is None else value
 
     @staticmethod
-    def _normalize_config(config: Any) -> Any:
+    def _normalize_config(config: PretrainedConfig) -> PretrainedConfig:
         qwen3_config = getattr(config, "qwen3_config", None)
         if qwen3_config is None:
             qwen3_config = getattr(config, "language_config", None)
