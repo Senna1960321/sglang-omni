@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Callable, Iterable
+from dataclasses import _MISSING_TYPE as MissingType
 from dataclasses import MISSING, dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
@@ -154,7 +155,7 @@ def _validate_emit_mode(emit: str | None) -> None:
 def wire(
     default: object = MISSING,
     *,
-    default_factory: Any = MISSING,
+    default_factory: Callable[[], object] | MissingType = MISSING,
     emit: str | None = None,
     codec: str = "raw",
 ) -> Any:
