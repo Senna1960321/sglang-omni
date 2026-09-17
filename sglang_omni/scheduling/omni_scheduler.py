@@ -1324,7 +1324,7 @@ class OmniScheduler(Generic[RequestDataT]):
 
     def _prepare_request_limits(
         self,
-        req_data: Any,
+        req_data: RequestDataT,
     ) -> str | None:
         req = req_data.req
         self.init_req_max_new_tokens(req)
@@ -1365,7 +1365,7 @@ class OmniScheduler(Generic[RequestDataT]):
         return True
 
     def _initialize_request_stream_state(
-        self, req_data: ARRequestData, payload: StagePayload
+        self, req_data: RequestDataT, payload: StagePayload
     ) -> None:
         for chunk in payload.prefetched_chunks:
             self._append_stream_chunk(req_data, chunk)
@@ -2787,7 +2787,7 @@ class OmniScheduler(Generic[RequestDataT]):
 
     @staticmethod
     def _append_stream_chunk_default(
-        req_data: Any,
+        req_data: RequestDataT,
         chunk: "StreamItem",
     ) -> None:
         stream_chunks = getattr(req_data, "stream_chunks", None)
@@ -2796,9 +2796,7 @@ class OmniScheduler(Generic[RequestDataT]):
             req_data.stream_chunks = stream_chunks
         stream_chunks.append(chunk)
 
-    def _append_stream_chunk(
-        self, req_data: ARRequestData, chunk: "StreamItem"
-    ) -> None:
+    def _append_stream_chunk(self, req_data: RequestDataT, chunk: "StreamItem") -> None:
         if self._stream_chunk_handler is None:
             self._append_stream_chunk_default(req_data, chunk)
             return
@@ -2806,7 +2804,7 @@ class OmniScheduler(Generic[RequestDataT]):
 
     def _mark_stream_done(
         self,
-        req_data: Any,
+        req_data: RequestDataT,
     ) -> None:
         if self._stream_done_handler is None:
             req_data.stream_done = True
