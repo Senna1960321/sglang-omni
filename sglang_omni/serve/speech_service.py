@@ -1064,7 +1064,7 @@ def _batch_reference_cache_key(request: CreateSpeechRequest) -> _ReferenceCacheK
     )
 
 
-def _freeze_reference_value(value: Any) -> Any:
+def _freeze_reference_value(value: object) -> object:
     if isinstance(value, dict):
         return tuple(
             (key, _freeze_reference_value(item)) for key, item in sorted(value.items())

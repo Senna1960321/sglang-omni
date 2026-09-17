@@ -217,7 +217,7 @@ class ConversationItemTruncate(ClientEvent):
     audio_end_ms: int = Field(ge=0)
 
 
-def make_event(event_type: str, **fields: Any) -> dict[str, Any]:
+def make_event(event_type: str, **fields: object) -> dict[str, Any]:
     """Construct a server event dict. event_id is filled in by the
     session loop so handlers don't have to."""
     payload: dict[str, Any] = {"type": event_type}

@@ -618,7 +618,7 @@ class Client:
         return chunk
 
 
-def _extract_inputs(request: GenerateRequest) -> Any:
+def _extract_inputs(request: GenerateRequest) -> object:
     choices = [
         request.prompt is not None,
         request.prompt_token_ids is not None,
