@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, SupportsFloat, SupportsIndex
 from urllib.parse import unquote, urlparse
 
 import numpy as np
+from typing_extensions import Buffer
 
 from sglang_omni.models.auk import constants as C
 from sglang_omni.models.auk.hf_config import AuKRuntimeConfig
@@ -83,7 +84,9 @@ def _resolve_reference(
     )
 
 
-def _resolve_float(raw: Any, default: float | None) -> float | None:
+def _resolve_float(
+    raw: str | Buffer | SupportsFloat | SupportsIndex | None, default: float | None
+) -> float | None:
     if raw is None:
         return default
     try:

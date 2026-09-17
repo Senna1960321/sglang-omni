@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from typing import Any, TypeVar
+from typing import Any, SupportsFloat, SupportsIndex, TypeVar
+
+from typing_extensions import Buffer
 
 from sglang_omni.models.ming_tts.payload_types import (
     MING_TTS_DEFAULT_MAX_DECODE_STEPS,
@@ -94,7 +96,11 @@ def preprocess_ming_tts_payload(
         except (TypeError, ValueError) as exc:
             raise ValueError(f"Ming-Omni-TTS {name} must be an integer") from exc
 
-    def resolve_float(name: str, value: Any, default: float) -> float:
+    def resolve_float(
+        name: str,
+        value: str | Buffer | SupportsFloat | SupportsIndex | None,
+        default: float,
+    ) -> float:
         if value is None:
             return float(default)
         if isinstance(value, bool):
