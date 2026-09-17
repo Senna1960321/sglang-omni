@@ -7,9 +7,12 @@ import hashlib
 import logging
 import os
 import queue
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import torch
+
+if TYPE_CHECKING:
+    from tensorrt import IBuilderConfig, ICudaEngine
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +104,9 @@ def _dynamic_shapes(time: int) -> dict[str, tuple[int, ...]]:
     }
 
 
-def _try_enable_fp16_tactics(config: Any, trt: BuilderFlagNamespace) -> bool:
+def _try_enable_fp16_tactics(
+    config: "IBuilderConfig", trt: BuilderFlagNamespace
+) -> bool:
     """Enable weak-typed FP16 tactics when TensorRT still exposes the flag.
 
     Note (chenyang):
@@ -226,7 +231,7 @@ def _canonicalize_device(device: str | torch.device) -> torch.device:
 class FlowEstimatorTRT:
     def __init__(
         self,
-        engine: Any,
+        engine: "ICudaEngine",
         device: str | torch.device,
         *,
         io_dtype: torch.dtype,
@@ -246,7 +251,7 @@ class FlowEstimatorTRT:
             stream = torch.cuda.Stream(device=self.device)
             self._pool.put([ctx, stream])
 
-    def acquire_estimator(self) -> tuple[list[Any], Any]:
+    def acquire_estimator(self) -> tuple[list[Any], "ICudaEngine"]:
         return self._pool.get(), self.trt_engine
 
     def release_estimator(self, context: object, stream: object) -> None:
