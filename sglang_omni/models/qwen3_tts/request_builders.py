@@ -12,7 +12,7 @@ import threading
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar
 
 import torch
 
@@ -126,35 +126,6 @@ class SubtalkerSampling:
     temperature: float
     top_p: float
     top_k: int
-
-
-class PromptTextWrapper(Protocol):
-    def _tokenize_texts(self, texts: list[str]) -> list[torch.Tensor]: ...
-
-    def _build_assistant_text(self, text: str) -> str: ...
-
-
-class CustomVoicePromptBuilder(Protocol):
-    def build_custom_voice_inputs(
-        self,
-        *,
-        input_id: torch.Tensor,
-        voice: str,
-        language: str,
-        non_streaming_mode: bool,
-        instruct_id: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]: ...
-
-
-class VoiceDesignPromptBuilder(Protocol):
-    def build_voice_design_inputs(
-        self,
-        *,
-        input_id: torch.Tensor,
-        language: str,
-        non_streaming_mode: bool,
-        instruct_id: torch.Tensor | None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]: ...
 
 
 def resolve_subtalker_sampling(gen_kwargs: dict[str, Any]) -> SubtalkerSampling:
@@ -726,7 +697,9 @@ def _build_qwen3_tts_pad_embed(model: PromptModel) -> torch.Tensor:
         )
 
 
-def _build_instruct_id(wrapper: Any, instructions: str | None) -> torch.Tensor | None:
+def _build_instruct_id(
+    wrapper: "Qwen3TTSModel", instructions: str | None
+) -> torch.Tensor | None:
     if not instructions:
         return None
     if hasattr(wrapper, "_build_instruct_text"):
@@ -1273,8 +1246,8 @@ def _prepare_qwen3_tts_base_request(
 def _prepare_qwen3_tts_custom_voice_request(
     *,
     state: Qwen3TTSState,
-    model: CustomVoicePromptBuilder,
-    wrapper: PromptTextWrapper,
+    model: "PromptModel",
+    wrapper: "Qwen3TTSModel",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
     input_id = wrapper._tokenize_texts([wrapper._build_assistant_text(state.text)])[0]
     # Note(yzxiao): QwenLM/Qwen3-TTS (qwen-tts 0.1.1) drops 0.6B instructions
@@ -1294,8 +1267,8 @@ def _prepare_qwen3_tts_custom_voice_request(
 def _prepare_qwen3_tts_voice_design_request(
     *,
     state: Qwen3TTSState,
-    model: VoiceDesignPromptBuilder,
-    wrapper: PromptTextWrapper,
+    model: "PromptModel",
+    wrapper: "Qwen3TTSModel",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
     input_id = wrapper._tokenize_texts([wrapper._build_assistant_text(state.text)])[0]
     instruct_id = _build_instruct_id(wrapper, state.instructions)
