@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import mlx.core as mx
 import numpy as np
@@ -110,7 +110,7 @@ class AudioMlxModelRunner:
         prefix_slot_ids: list[int],
         new_slot_ids: list[int],
         req_pool_idx: int,
-        req: Any | None = None,
+        req: "Req | None" = None,
         needs_logits: bool = True,
         logit_edit_row: mx.array | None = None,
         logprob_spec: "MlxLogprobSpec | None" = None,

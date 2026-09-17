@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         MlxLogprobSpec,
         MlxSamplingParams,
     )
+    from sglang.srt.managers.schedule_batch import Req
 
 _SPEECH_IDS = mx.arange(SPEECH_TOKEN_SIZE, dtype=mx.int32)
 # Note (yexiaodong): MLX streams are thread-local; bind this lookup on the
@@ -59,7 +60,7 @@ class FunCosyVoice3MlxModelRunner:
 
     @staticmethod
     def _request_prompt(
-        req: Any,
+        req: "Req",
     ) -> tuple[list[int], list[int]]:
         text_ids = getattr(req, "_cosyvoice3_text_token_ids", None)
         prompt_ids = getattr(req, "_cosyvoice3_prompt_speech_token_ids", None)
@@ -130,7 +131,7 @@ class FunCosyVoice3MlxModelRunner:
         prefix_slot_ids: list[int],
         new_slot_ids: list[int],
         req_pool_idx: int,
-        req: Any | None = None,
+        req: "Req | None" = None,
         needs_logits: bool = True,
         logit_edit_row: mx.array | None = None,
         logprob_spec: MlxLogprobSpec | None = None,
@@ -188,7 +189,7 @@ class FunCosyVoice3MlxModelRunner:
             lazy_logprobs=lazy_logprobs,
         )
 
-    def _sampling_params_for_request(self, req: Any) -> MlxSamplingParams:
+    def _sampling_params_for_request(self, req: "Req") -> MlxSamplingParams:
         from sglang.srt.hardware_backend.mlx.sampling import (
             DEFAULT_SAMPLING_SEED,
             MlxSamplingParams,
