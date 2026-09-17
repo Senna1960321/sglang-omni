@@ -145,7 +145,7 @@ class SimpleScheduler:
     @staticmethod
     def _emit_result(
         request_id: str,
-        result: Any,
+        result: object,
         outbox: _queue_mod.Queue[OutgoingMessage],
     ) -> None:
         outbox.put(
