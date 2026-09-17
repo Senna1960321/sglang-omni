@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from types import MethodType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypeAlias
 
 import torch
 
@@ -19,11 +19,26 @@ from sglang_omni.platforms import current_platform
 from sglang_omni.vendor.sglang.core import ForwardBatch
 
 if TYPE_CHECKING:
+    from sglang.srt.models.qwen3_moe import Qwen3MoeAttention
     from sglang.srt.models.qwen3_vl_moe import Qwen3MoeLLMModel
 
 logger = logging.getLogger(__name__)
 
 _FUSABLE_HEAD_DIMS = (64, 128, 256)
+
+QKNormRopeWithCacheKernel: TypeAlias = Callable[
+    [
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        bool,
+        float,
+    ],
+    None,
+]
 
 
 class ThinkerFusedRopeGate:
@@ -52,15 +67,15 @@ class ThinkerFusedRopeGate:
 
 
 def _fused_apply_qk_norm_rope(
-    attn: Any,
+    attn: "Qwen3MoeAttention",
     qkv: torch.Tensor,
     positions: torch.Tensor,
     forward_batch: ForwardBatch,
     *,
     gate: ThinkerFusedRopeGate,
-    kernel: Any,
+    kernel: QKNormRopeWithCacheKernel,
     cos_sin_cache: torch.Tensor,
-):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     if not gate.enabled or qkv.dtype != torch.bfloat16 or not qkv.is_contiguous():
         return attn._omni_unfused_apply_qk_norm_rope(qkv, positions, forward_batch)
 
@@ -97,7 +112,7 @@ def _prefill_graph_enabled() -> bool:
 def install_thinker_fused_rope(
     model: "Qwen3MoeLLMModel",
     *,
-    kernel_provider: Callable[[], Callable[..., None] | None] | None = None,
+    kernel_provider: Callable[[], QKNormRopeWithCacheKernel | None] | None = None,
     prefill_graph_enabled: bool | None = None,
 ) -> ThinkerFusedRopeGate | None:
     """Route eligible thinker attention layers through the fused kernel.
@@ -152,14 +167,14 @@ def install_thinker_fused_rope(
         attn._omni_unfused_apply_qk_norm_rope = attn.apply_qk_norm_rope
 
         def _bound(
-            attn_self,
-            qkv,
-            positions,
-            forward_batch,
-            _gate=gate,
-            _kernel=kernel,
-            _cache=cos_sin_cache,
-        ):
+            attn_self: "Qwen3MoeAttention",
+            qkv: torch.Tensor,
+            positions: torch.Tensor,
+            forward_batch: ForwardBatch,
+            _gate: ThinkerFusedRopeGate = gate,
+            _kernel: QKNormRopeWithCacheKernel = kernel,
+            _cache: torch.Tensor = cos_sin_cache,
+        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             return _fused_apply_qk_norm_rope(
                 attn_self,
                 qkv,

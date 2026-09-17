@@ -12,10 +12,12 @@ from sglang_omni.model_runner.base import ModelRunner
 from sglang_omni.model_runner.sglang_execution import attn_forward_context
 
 if TYPE_CHECKING:
+    from sglang.srt.layers.vocab_parallel_embedding import VocabParallelEmbedding
     from sglang.srt.managers.schedule_batch import ScheduleBatch
     from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 
     from sglang_omni.model_runner.model_worker import ModelWorker
+    from sglang_omni.models.ming_omni.thinker import BailingMoeV2TextModel
     from sglang_omni.scheduling.sglang_backend.output_processor import (
         SGLangOutputProcessor,
     )
@@ -49,7 +51,9 @@ class MingThinkerModelRunner(ModelRunner):
         self._audio_token_id = self._token_id(hf_config, "audio_token_id")
 
     @staticmethod
-    def _get_embed_tokens(text_model: object) -> Any:
+    def _get_embed_tokens(
+        text_model: "BailingMoeV2TextModel",
+    ) -> "VocabParallelEmbedding":
         embed_tokens = getattr(text_model, "embed_tokens", None)
         if embed_tokens is not None:
             return embed_tokens
