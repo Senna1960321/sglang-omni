@@ -2,7 +2,7 @@
 
 import logging
 from types import MethodType
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -39,7 +39,7 @@ fused_qk_norm_rope = current_platform.get_fused_qk_norm_rope()
 _MROPE_ONLY_KEYS = frozenset({"interleaved", "mrope_interleaved", "mrope_section"})
 
 
-def _normalize_asr_text_rope(text_config: Any) -> None:
+def _normalize_asr_text_rope(text_config: object) -> None:
     # note (luojiaxuan): ASR has no spatial axes: all three MRoPE position
     # rows are identical, so ordinary text RoPE is numerically equivalent and
     # avoids the multimodal permutation/copy path on every decoder layer.
@@ -266,7 +266,7 @@ class Qwen3ASRForConditionalGeneration(nn.Module):
         input_ids: torch.Tensor,
         positions: torch.Tensor,
         forward_batch: ForwardBatch,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> torch.Tensor:
         if forward_batch.mrope_positions is not None:
             positions = forward_batch.mrope_positions[0]

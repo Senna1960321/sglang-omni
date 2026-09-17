@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import torch
 import torch.nn.functional as F
@@ -541,7 +541,7 @@ class WhisperForConditionalGeneration(nn.Module):
         input_ids: torch.Tensor,
         positions: torch.Tensor,
         forward_batch: ForwardBatch,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> LogitsProcessorOutput:
         del kwargs
 
