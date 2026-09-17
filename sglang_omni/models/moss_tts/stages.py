@@ -24,6 +24,7 @@ from sglang_omni.models.moss_tts.audio_tokenizer import (
 )
 from sglang_omni.models.moss_tts.engine_builder import MossTtsEngineBuilder
 from sglang_omni.models.moss_tts.hf_loading import (
+    MossProcessorConfigSource,
     load_moss_processor_class,
     moss_transformers_processor_compat,
 )
@@ -80,7 +81,9 @@ def _resolve_compute_dtype(
     )
 
 
-def _normalize_moss_processor_config(processor: Any) -> None:
+def _normalize_moss_processor_config(
+    processor: MossProcessorConfigSource | None,
+) -> None:
     model_config = getattr(processor, "model_config", None)
     if model_config is None:
         return
@@ -139,7 +142,7 @@ def _load_moss_processor(
 
 
 def _resolve_audio_tokenizer_model_path(
-    processor: Any,
+    processor: MossProcessorConfigSource,
     codec_model_path: str | None,
 ) -> str:
     return str(

@@ -23,6 +23,7 @@ from sglang_omni.models.moss_tts.audio_tokenizer import (
     resolve_moss_audio_dtype,
 )
 from sglang_omni.models.moss_tts.hf_loading import (
+    MossProcessorConfigSource,
     load_moss_processor_class,
     moss_transformers_processor_compat,
 )
@@ -235,7 +236,7 @@ def _load_moss_tts_local_processor(model_path: str) -> Any:
 
 
 def _resolve_audio_tokenizer_model_path(
-    processor: Any,
+    processor: MossProcessorConfigSource,
     codec_model_path: str | None,
 ) -> str:
     if codec_model_path is not None:

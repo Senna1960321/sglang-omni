@@ -8,7 +8,7 @@ import traceback
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from itertools import accumulate
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -29,6 +29,9 @@ from sglang_omni.proto import StagePayload
 from sglang_omni.scheduling.pipeline_state import build_usage
 from sglang_omni.scheduling.vocoder_base import BatchVocoderBase
 from sglang_omni.utils.audio_payload import audio_waveform_payload
+
+if TYPE_CHECKING:
+    from sglang_omni.models.moss_tts.hf_loading import MossProcessorConfigSource
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +225,7 @@ def decode_codes_batch(
 class MossTTSVocoder(BatchVocoderBase[MossTTSState, torch.Tensor, torch.Tensor]):
     def __init__(
         self,
-        processor: Any,
+        processor: "MossProcessorConfigSource | None",
         audio_vocoder: MossAudioVocoder,
         device: str,
         *,

@@ -9,7 +9,7 @@ import math
 from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from numbers import Integral, Real
-from typing import Any
+from typing import Any, Protocol
 
 from sglang.srt.utils.hf_transformers import (
     CONTEXT_LENGTH_KEYS,
@@ -17,8 +17,14 @@ from sglang.srt.utils.hf_transformers import (
     get_context_length,
     get_hf_text_config,
 )
+from transformers import PretrainedConfig
 
 MOSS_TTS_DEFAULT_CONTEXT_LENGTH = 8192
+
+
+class MossProcessorConfigSource(Protocol):
+    @property
+    def model_config(self) -> PretrainedConfig: ...
 
 
 def _validate_context_length_metadata(text_config: object) -> bool:
