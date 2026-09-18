@@ -258,7 +258,7 @@
 "settings.systemDefault" = "System default";
 "settings.sounds" = "Play start and finish sounds";
 "settings.autoPaste" = "Insert text automatically at the original cursor";
-"settings.autoPasteNote" = "If the target or cursor changes, your transcript stays available to copy.";
+"settings.autoPasteNote" = "Keep the input focused until dictation finishes. Apps that hide their input fields use ⌘V; only their application and window can be checked. If the target changes, your transcript stays available to copy.";
 "settings.languages" = "Languages";
 "settings.speechLanguage" = "Speech language";
 "settings.detectAutomatically" = "Detect automatically";

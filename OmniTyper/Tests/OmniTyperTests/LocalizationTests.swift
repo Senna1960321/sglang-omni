@@ -109,19 +109,17 @@ struct LocalizationTests {
     /// An ad-hoc signature ties the Accessibility grant to the build, so an
     /// update drops it while System Settings still shows it enabled. Losing a
     /// grant that was held before has to be reported differently from never
-    /// having been granted. Tests never hold the grant, so this covers the
-    /// untrusted side.
-    @Test @MainActor func aLostAccessibilityGrantIsDistinguishedFromNeverHavingOne() throws {
+    /// having been granted. A local test runner can itself hold the grant.
+    @Test @MainActor func aPreviousAccessibilityGrantIsStaleOnlyWhileUntrusted() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = AppStore(directory: directory)
         let model = AppModel(store: store)
         defer { model.shutdown() }
         model.refreshPermissions()
-        #expect(model.accessibilityAllowed == false)
         #expect(model.accessibilityGrantStale == false)
         store.preferences.accessibilityWasTrusted = true
         model.refreshPermissions()
-        #expect(model.accessibilityGrantStale)
+        #expect(model.accessibilityGrantStale == !model.accessibilityAllowed)
     }
 }

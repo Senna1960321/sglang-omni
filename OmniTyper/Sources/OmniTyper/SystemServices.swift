@@ -3,6 +3,7 @@ import AppKit
 import AVFoundation
 import ApplicationServices
 import AudioToolbox
+import Carbon
 import Combine
 import CoreAudio
 
@@ -450,13 +451,32 @@ struct InsertionTarget {
     let applicationName: String
     let bundleID: String
     let selectedText: String
-    fileprivate let application: NSRunningApplication
-    fileprivate let element: AXUIElement
-    fileprivate let range: CFRange
-    fileprivate let value: String?
-    fileprivate let window: AXUIElement?
-    fileprivate let windowTitle: String?
-    fileprivate let document: String?
+    let application: NSRunningApplication
+    let element: AXUIElement?
+    let range: CFRange?
+    let value: String?
+    let window: AXUIElement?
+    let windowTitle: String?
+    let document: String?
+
+    func validate(against current: InsertionTarget) throws {
+        guard application.processIdentifier == current.application.processIdentifier else {
+            throw Failure("sys.destChanged")
+        }
+        func sameElement(_ lhs: AXUIElement?, _ rhs: AXUIElement?) -> Bool {
+            if let lhs, let rhs { return CFEqual(lhs, rhs) }
+            return lhs == nil && rhs == nil
+        }
+        guard sameElement(element, current.element) else { throw Failure("sys.fieldChanged") }
+        guard (element != nil || window != nil), sameElement(window, current.window),
+              windowTitle == current.windowTitle, document == current.document, value == current.value else {
+            throw Failure("sys.contentChanged")
+        }
+        guard range?.location == current.range?.location, range?.length == current.range?.length,
+              selectedText == current.selectedText else {
+            throw Failure("sys.cursorChanged")
+        }
+    }
 }
 
 @MainActor
@@ -502,24 +522,34 @@ enum TextInsertion {
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
             throw Failure("sys.focusField")
         }
+        guard !IsSecureEventInputEnabled() else { throw TextInsertionError.secureField }
         requestManualAccessibility(app.processIdentifier)
-        let element = try focusedElement(of: app.processIdentifier)
-        var pid: pid_t = 0
-        guard AXUIElementGetPid(element, &pid) == .success, pid == app.processIdentifier else {
-            throw Failure("sys.appChanged")
+        let element = focusedElement(of: app.processIdentifier)
+        var range: CFRange?
+        var selection = ""
+        if let element {
+            var pid: pid_t = 0
+            guard AXUIElementGetPid(element, &pid) == .success, pid == app.processIdentifier else {
+                throw Failure("sys.appChanged")
+            }
+            try rejectSecure(element)
+            let role = attribute(element, kAXRoleAttribute) as? String ?? ""
+            guard [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(role)
+                    || (attribute(element, "AXEditable") as? NSNumber)?.boolValue == true else {
+                throw Failure("sys.focusEditable")
+            }
+            range = try selectionRange(element)
+            if let range { selection = try selectedText(element, range: range) }
         }
-        try rejectSecure(element)
-        let role = attribute(element, kAXRoleAttribute) as? String ?? ""
-        guard [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(role)
-                || (attribute(element, "AXEditable") as? NSNumber)?.boolValue == true else {
-            throw Failure("sys.focusEditable")
-        }
-        let range = try selectionRange(element)
-        let selectedText = try selectedText(element, range: range)
-        let window = elementAttribute(element, kAXWindowAttribute)
+        let application = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(application, 1)
+        let window = element.flatMap { elementAttribute($0, kAXWindowAttribute) }
+            ?? elementAttribute(application, kAXFocusedWindowAttribute)
+        guard element != nil || window != nil else { throw Failure("sys.fieldOpaque") }
+        // Note (Codex): ponytail: opaque editors permit only window checks; use field checks when AX exposes them.
         return InsertionTarget(applicationName: app.localizedName ?? "Application", bundleID: app.bundleIdentifier ?? "",
-                               selectedText: selectedText, application: app, element: element, range: range,
-                               value: attribute(element, kAXValueAttribute) as? String, window: window,
+                               selectedText: selection, application: app, element: element, range: range,
+                               value: element.flatMap { attribute($0, kAXValueAttribute) as? String }, window: window,
                                windowTitle: window.flatMap { attribute($0, kAXTitleAttribute) as? String },
                                document: window.flatMap { attribute($0, kAXDocumentAttribute) as? String })
     }
@@ -533,10 +563,10 @@ enum TextInsertion {
         // an AXSelectedText write on a contenteditable, reports success and drops it,
         // so the app believed it had typed while nothing arrived. Pasting is the only
         // path that lands there.
-        if !isWebHosted(target.element),
-           AXUIElementIsAttributeSettable(target.element, kAXSelectedTextAttribute as CFString, &settable) == .success,
+        if let element = target.element, target.range != nil, !isWebHosted(element),
+           AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &settable) == .success,
            settable.boolValue {
-            let result = AXUIElementSetAttributeValue(target.element, kAXSelectedTextAttribute as CFString, text as CFString)
+            let result = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString)
             guard result == .success else {
                 throw Failure("sys.replaceFailed")
             }
@@ -559,7 +589,7 @@ enum TextInsertion {
         guard clipboard.changeCount == originalCount else {
             throw Failure("sys.clipboardChanged")
         }
-        guard let source = CGEventSource(stateID: .privateState),
+        guard let source = CGEventSource(stateID: .hidSystemState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
             throw Failure("sys.pasteEvent")
@@ -584,24 +614,25 @@ enum TextInsertion {
             }
         }
         try validate(target)
-        let lengthBeforePaste = characterCount(target.element)
+        let lengthBeforePaste = target.element.flatMap { characterCount($0) }
         down.flags = .maskCommand
         up.flags = .maskCommand
-        down.postToPid(target.application.processIdentifier)
-        up.postToPid(target.application.processIdentifier)
+        down.post(tap: .cgAnnotatedSessionEventTap)
+        up.post(tap: .cgAnnotatedSessionEventTap)
         // Once sent, paste cannot be revoked. Do not let cancellation restore the
         // old clipboard while the queued paste is still being consumed.
-        await Task.detached { try? await Task.sleep(nanoseconds: 300_000_000) }.value
+        await Task.detached { try? await Task.sleep(nanoseconds: 800_000_000) }.value
         // Note (Jiaxin Deng): A destination can ignore the keystroke without reporting
         // anything, which is indistinguishable from success unless the field is
         // asked. Reporting an unconfirmed paste is what keeps "it typed nothing and
         // said nothing" from being a silent state. Nothing is retried, because the
         // paste may still be queued and sending it twice would duplicate the text.
-        if let before = lengthBeforePaste, let after = characterCount(target.element),
-           after == before {
+        if let before = lengthBeforePaste, let element = target.element, let after = characterCount(element),
+           let range = target.range, (text as NSString).length != range.length, after == before {
             throw Failure("sys.pasteIgnored")
         }
-        Diagnostics.record("insert.ok", ["destination": target.bundleID, "path": "paste"])
+        Diagnostics.record("insert.ok", ["destination": target.bundleID,
+                                         "path": target.element == nil ? "paste-window" : "paste"])
     }
 
     /// Both sides of the paste comparison have to be measured the same way, so
@@ -623,23 +654,7 @@ enum TextInsertion {
               NSWorkspace.shared.frontmostApplication?.processIdentifier == target.application.processIdentifier else {
             throw Failure("sys.destChanged")
         }
-        let focused = try focusedElement(of: target.application.processIdentifier)
-        guard CFEqual(focused, target.element) else {
-            throw Failure("sys.fieldChanged")
-        }
-        try rejectSecure(focused)
-        let window = elementAttribute(focused, kAXWindowAttribute)
-        guard attribute(focused, kAXValueAttribute) as? String == target.value,
-              (window == nil && target.window == nil) || (window != nil && target.window != nil && CFEqual(window!, target.window!)),
-              window.flatMap({ attribute($0, kAXTitleAttribute) as? String }) == target.windowTitle,
-              window.flatMap({ attribute($0, kAXDocumentAttribute) as? String }) == target.document else {
-            throw Failure("sys.contentChanged")
-        }
-        let range = try selectionRange(focused)
-        guard range.location == target.range.location, range.length == target.range.length,
-              try selectedText(focused, range: range) == target.selectedText else {
-            throw Failure("sys.cursorChanged")
-        }
+        try target.validate(against: capture())
     }
 
     /// Asks the application before the system-wide element. Chromium answers the
@@ -647,7 +662,7 @@ enum TextInsertion {
     /// for the system-wide one, so Electron apps were unreachable through the
     /// latter alone. The pid check in `capture()` still guards against the
     /// frontmost app changing underneath us.
-    private static func focusedElement(of pid: pid_t) throws -> AXUIElement {
+    private static func focusedElement(of pid: pid_t) -> AXUIElement? {
         for source in [AXUIElementCreateApplication(pid), AXUIElementCreateSystemWide()] {
             AXUIElementSetMessagingTimeout(source, 1)
             if let value = attribute(source, kAXFocusedUIElementAttribute),
@@ -657,7 +672,7 @@ enum TextInsertion {
                 return element
             }
         }
-        throw Failure("sys.fieldOpaque")
+        return nil
     }
 
     private static func rejectSecure(_ element: AXUIElement) throws {
@@ -675,11 +690,9 @@ enum TextInsertion {
         }
     }
 
-    private static func selectionRange(_ element: AXUIElement) throws -> CFRange {
-        guard let value = attribute(element, kAXSelectedTextRangeAttribute),
-              CFGetTypeID(value) == AXValueGetTypeID() else {
-            throw Failure("sys.noCursor")
-        }
+    private static func selectionRange(_ element: AXUIElement) throws -> CFRange? {
+        guard let value = attribute(element, kAXSelectedTextRangeAttribute) else { return nil }
+        guard CFGetTypeID(value) == AXValueGetTypeID() else { throw Failure("sys.badSelection") }
         let axValue = value as! AXValue
         var range = CFRange()
         guard AXValueGetType(axValue) == .cfRange, AXValueGetValue(axValue, .cfRange, &range),

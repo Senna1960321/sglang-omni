@@ -258,7 +258,7 @@
 "settings.systemDefault" = "系统默认";
 "settings.sounds" = "播放开始和结束提示音";
 "settings.autoPaste" = "自动在原光标处写入文字";
-"settings.autoPasteNote" = "如果目标或光标发生变化，转写结果仍可复制。";
+"settings.autoPasteNote" = "请保持输入框焦点，直到听写完成。对于未暴露输入框的应用，将使用 ⌘V 粘贴，只能核对应用和窗口。目标变化时，转写结果仍可复制。";
 "settings.languages" = "语言";
 "settings.speechLanguage" = "语音语言";
 "settings.detectAutomatically" = "自动检测";
