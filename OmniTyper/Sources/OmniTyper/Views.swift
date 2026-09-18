@@ -92,6 +92,7 @@ struct RootView: View {
                         }.padding(.horizontal, 14).padding(.vertical, 12)
                             .background(page == item ? accent.opacity(0.1) : .clear, in: RoundedRectangle(cornerRadius: 10))
                             .foregroundStyle(page == item ? accent : .primary)
+                            .contentShape(Rectangle())
                     }.buttonStyle(.plain)
                 }
             }.padding(.horizontal, 12)
@@ -525,7 +526,7 @@ struct PreferencesView: View {
     @ViewState private var microphones: [MicrophoneDevice] = []
     @ViewState private var captureMonitor: Any?
     @ViewState private var capturing = false
-    @ViewState private var login = SMAppService.mainApp.status == .enabled
+    @ViewState private var login = false
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             pageTitle("Settle into your flow.", detail: "Your shortcuts, your languages, your privacy.")
@@ -636,7 +637,12 @@ struct PreferencesView: View {
                     Text("OmniTyper 0.1 · Apache-2.0 · Independent of Typeless").font(.caption).foregroundStyle(.secondary)
                 }
             }
-        }.onAppear { microphones = AudioRecorder.devices() }
+        }.onAppear {
+            microphones = AudioRecorder.devices()
+            // SMAppService.status is a synchronous XPC round trip; a @State default
+            // expression would repeat it on every body pass.
+            login = SMAppService.mainApp.status == .enabled
+        }
             .onDisappear { endCapture() }
     }
     private func captureShortcut() {

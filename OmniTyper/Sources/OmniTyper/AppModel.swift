@@ -97,9 +97,13 @@ final class AppModel: ObservableObject {
 
     func refreshPermissions() {
         let previous = accessibilityAllowed
-        accessibilityAllowed = TextInsertion.isTrusted
-        microphoneAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        if accessibilityAllowed && !previous { configureShortcut(store.preferences) }
+        let trusted = TextInsertion.isTrusted
+        let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        // Published values have no equality check, so the one-second timer would
+        // otherwise redraw every view twice a second forever.
+        if accessibilityAllowed != trusted { accessibilityAllowed = trusted }
+        if microphoneAllowed != microphone { microphoneAllowed = microphone }
+        if trusted && !previous { configureShortcut(store.preferences) }
     }
 
     func requestMicrophone() {
