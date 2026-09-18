@@ -20,7 +20,13 @@ struct WorkerFailure: LocalizedError {
 
 @MainActor
 final class WorkerClient: ObservableObject {
-    @Published private(set) var status = "Models are not loaded"
+    /// Resolved on read: this client is constructed before the store loads the
+    /// saved interface language.
+    @Published private(set) var statusText: String?
+    var status: String { statusText ?? L("worker.notLoaded") }
+    /// Tracks whether `status` currently shows the ready state, which used to be
+    /// recovered by comparing the displayed string.
+    private var showingReady = false
     @Published private(set) var isRunning = false
 
     private struct Pending {
@@ -49,28 +55,29 @@ final class WorkerClient: ObservableObject {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
                 do {
-                    guard pending == nil else { throw WorkerError.unavailable("The local model is already busy.") }
+                    guard pending == nil else { throw WorkerError.unavailable(L("worker.busy")) }
                     var message = payload
                     message["id"] = requestID
                     guard JSONSerialization.isValidJSONObject(message) else {
-                        throw WorkerError.unavailable("The model request contains unsupported data.")
+                        throw WorkerError.unavailable(L("worker.badRequest"))
                     }
                     var data = try JSONSerialization.data(withJSONObject: message)
                     guard data.count < 256 * 1_024 else {
-                        throw WorkerError.unavailable("The model request exceeds 256 KiB. Shorten the selected text or dictionary.")
+                        throw WorkerError.unavailable(L("worker.tooLarge"))
                     }
                     data.append(0x0A)
                     try ensureProcess(python: python)
-                    guard let input else { throw WorkerError.unavailable("The local worker has no input connection.") }
+                    guard let input else { throw WorkerError.unavailable(L("worker.noInput")) }
                     pending = Pending(id: requestID, continuation: continuation)
-                    status = payload["op"] as? String == "prepare" ? "Preparing speech model…" : "Processing…"
+                    statusText = payload["op"] as? String == "prepare" ? L("worker.preparing") : L("worker.processing")
+                    showingReady = false
                     let workerGeneration = generation
                     let seconds: UInt64 = payload["op"] as? String == "prepare" ? 1_800 : 600
                     timeoutTask = Task { [weak self] in
                         do { try await Task.sleep(nanoseconds: seconds * 1_000_000_000) }
                         catch { return }
                         guard let self, self.pending?.id == requestID else { return }
-                        self.failAndStop(WorkerError.unavailable("The local model timed out. Try again or choose a smaller model."))
+                        self.failAndStop(WorkerError.unavailable(L("worker.timedOut")))
                     }
                     // A full pipe must never block the UI, including a stuck worker.
                     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -78,7 +85,7 @@ final class WorkerClient: ObservableObject {
                         catch {
                             DispatchQueue.main.async {
                                 guard let self, self.generation == workerGeneration, self.pending?.id == requestID else { return }
-                                self.failAndStop(WorkerError.unavailable("The local worker stopped accepting requests."))
+                                self.failAndStop(WorkerError.unavailable(L("worker.notAccepting")))
                             }
                         }
                     }
@@ -91,7 +98,7 @@ final class WorkerClient: ObservableObject {
                 guard let self, self.pending?.id == requestID else { return }
                 self.finish(.failure(CancellationError()))
                 self.shutdown()
-                self.status = "Cancelled"
+                self.statusText = L("worker.cancelled"); self.showingReady = false
             }
         }
     }
@@ -99,7 +106,7 @@ final class WorkerClient: ObservableObject {
     func stop() {
         finish(.failure(CancellationError()))
         shutdown()
-        status = "Models are not loaded"
+        statusText = nil; showingReady = false
     }
 
     private func ensureProcess(python: String) throws {
@@ -113,7 +120,7 @@ final class WorkerClient: ObservableObject {
         guard let worker = [bundled, overridden].compactMap({ $0 }).first(where: {
             FileManager.default.isReadableFile(atPath: $0.path)
         }) else {
-            throw WorkerError.unavailable("The local worker is missing. Rebuild the app, or set OMNITYPER_WORKER to backend/worker.py.")
+            throw WorkerError.unavailable(L("worker.missing"))
         }
         let child = Process()
         let stdin = Pipe()
@@ -176,7 +183,7 @@ final class WorkerClient: ObservableObject {
         catch {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
-            throw WorkerError.unavailable("Could not start Python at \(executable.path). Run the dependency setup script first.")
+            throw WorkerError.unavailable(L("worker.pythonStart", executable.path))
         }
         process = child
         input = stdin.fileHandleForWriting
@@ -193,7 +200,7 @@ final class WorkerClient: ObservableObject {
             stdoutEnded = true
             if exitStatus != nil { handleExit() }
             else if pending != nil {
-                failAndStop(WorkerError.unavailable("The local worker closed its response connection."))
+                failAndStop(WorkerError.unavailable(L("worker.closed")))
             }
             return
         }
@@ -201,7 +208,7 @@ final class WorkerClient: ObservableObject {
         while let newline = stdoutBuffer.firstIndex(of: 0x0A) {
             let line = stdoutBuffer.prefix(upTo: newline)
             guard line.count <= maximumLineBytes else {
-                failAndStop(WorkerError.unavailable("The local worker sent an oversized response."))
+                failAndStop(WorkerError.unavailable(L("worker.oversized")))
                 return
             }
             let complete = Data(line)
@@ -209,29 +216,29 @@ final class WorkerClient: ObservableObject {
             if complete.isEmpty { continue }
             guard let message = (try? JSONSerialization.jsonObject(with: complete)) as? [String: Any],
                   let responseID = message["id"] as? String else {
-                failAndStop(WorkerError.unavailable("The local worker sent an invalid response. Check the installed dependencies."))
+                failAndStop(WorkerError.unavailable(L("worker.invalid")))
                 return
             }
             guard responseID == pending?.id else { continue }
             if message["event"] as? String == "progress" {
-                if let progress = message["message"] as? String { status = String(progress.prefix(300)) }
+                if let progress = message["message"] as? String { statusText = String(progress.prefix(300)); showingReady = false }
             } else if let ok = message["ok"] as? Bool {
                 if ok {
-                    status = "Ready"
+                    statusText = L("worker.ready"); showingReady = true
                     finish(.success(message))
                 } else {
-                    let description = message["error"] as? String ?? "Local model processing failed."
-                    status = "Processing failed"
+                    let description = message["error"] as? String ?? L("worker.failed")
+                    statusText = L("worker.processFailed"); showingReady = false
                     finish(.failure(WorkerFailure(message: String(description.prefix(2_000)),
                                                   rawText: message["raw_text"] as? String)))
                 }
             } else {
-                failAndStop(WorkerError.unavailable("The local worker sent an incomplete response."))
+                failAndStop(WorkerError.unavailable(L("worker.incomplete")))
                 return
             }
         }
         if stdoutBuffer.count > maximumLineBytes {
-            failAndStop(WorkerError.unavailable("The local worker sent an oversized response."))
+            failAndStop(WorkerError.unavailable(L("worker.oversized")))
         }
     }
 
@@ -246,16 +253,16 @@ final class WorkerClient: ObservableObject {
     private func handleExit() {
         let code = exitStatus ?? -1
         if pending != nil {
-            finish(.failure(WorkerError.unavailable("The local worker exited (status \(code)). Check Python dependencies and available memory, then retry.")))
-            status = "Worker stopped"
-        } else if status == "Ready" { status = "Models are not loaded" }
+            finish(.failure(WorkerError.unavailable(L("worker.exited", String(code)))))
+            statusText = L("worker.stopped"); showingReady = false
+        } else if showingReady { statusText = nil; showingReady = false }
         shutdown()
     }
 
     private func failAndStop(_ error: Error) {
         finish(.failure(error))
         shutdown()
-        status = "Worker stopped"
+        statusText = L("worker.stopped"); showingReady = false
     }
 
     private func shutdown() {
@@ -292,11 +299,11 @@ final class WorkerClient: ObservableObject {
 
     private func resolvePython(_ supplied: String) throws -> URL {
         let expanded = (supplied.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
-        guard !expanded.isEmpty else { throw WorkerError.unavailable("Choose the Python executable created by the setup script.") }
+        guard !expanded.isEmpty else { throw WorkerError.unavailable(L("worker.choosePython")) }
         if expanded.contains("/") {
             let url = URL(fileURLWithPath: expanded)
             guard FileManager.default.isExecutableFile(atPath: url.path) else {
-                throw WorkerError.unavailable("Python is not executable at \(url.path). Run the dependency setup script first.")
+                throw WorkerError.unavailable(L("worker.pythonNotExecutable", url.path))
             }
             return url
         }
@@ -305,7 +312,7 @@ final class WorkerClient: ObservableObject {
             let url = URL(fileURLWithPath: String(directory)).appendingPathComponent(expanded)
             if FileManager.default.isExecutableFile(atPath: url.path) { return url }
         }
-        throw WorkerError.unavailable("Could not find \(expanded). Choose the Python executable created by the setup script.")
+        throw WorkerError.unavailable(L("worker.pythonMissing", expanded))
     }
 
     private func log(_ message: String) {

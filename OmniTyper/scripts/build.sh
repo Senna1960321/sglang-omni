@@ -11,6 +11,11 @@ cp "$BIN_DIR/OmniTyper" "$APP_BUNDLE/Contents/MacOS/"
 cp "$APP_ROOT/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 cp "$APP_ROOT/backend/worker.py" "$APP_ROOT/backend/server.py" "$APP_BUNDLE/Contents/Resources/backend/"
 cp "$APP_ROOT/../LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
+for LPROJ in "$APP_ROOT"/Sources/OmniTyper/Resources/*.lproj; do
+  # Replace rather than merge so a rebuild cannot nest or keep stale files.
+  rm -rf "$APP_BUNDLE/Contents/Resources/$(basename "$LPROJ")"
+  cp -R "$LPROJ" "$APP_BUNDLE/Contents/Resources/"
+done
 /usr/libexec/PlistBuddy -c "Add :OmniTyperPython string $PYTHON_BIN" "$APP_BUNDLE/Contents/Info.plist"
 ICONSET="$APP_ROOT/.build/AppIcon.iconset"
 mkdir -p "$ICONSET"

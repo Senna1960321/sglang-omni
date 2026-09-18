@@ -21,7 +21,7 @@ open OmniTyper/dist/OmniTyper.app
 
 1. 在首页允许 **Microphone** 和 **Accessibility**。macOS 的隐私授权必须由用户在系统界面授予，应用无法自行批准。
 2. 在 **Settings → Local speech model → Download & prepare ASR** 准备识别模型。首次需要访问 Hugging Face；缓存后可离线识别。
-3. 在 **Settings → Text API** 填写 API 地址和服务端模型名；默认地址为 `http://127.0.0.1:11434/v1`。点击 **Connect & load models** 读取模型列表，也可以直接输入自己创建的模型名。
+3. 默认写作风格为 **verbatim**，普通听写只用本机 ASR，不需要文本 API。需要整理、翻译、语音编辑或问答时，再在 **Settings → Text API** 填写 API 地址和服务端模型名；默认地址为 `http://127.0.0.1:11434/v1`。点击 **Connect & load models** 读取模型列表，也可以直接输入自己创建的模型名。
 4. 在任意支持辅助功能的文本框放好光标，按 **Control + Option + Space**，等悬浮窗显示 **Listening** 后开始说话；录音时可看到实时转写，再按一次结束。结果写入原来的位置。
 5. **Esc** 取消。设置中可以录制自己的快捷键，或切换为按住说话、松开完成。
 
@@ -45,7 +45,7 @@ API 使用 `GET <Base URL>/models` 和 `POST <Base URL>/chat/completions`。Base
 
 本机 Ollama 通常不需要 API Key。可选 Key 仅保存在应用内存，退出或更改地址即清除，不写入历史、设置文件或日志。远程服务应使用 HTTPS；调用不跟随重定向。API 地址决定文本发送位置，本地 Ollama 也可能代理云模型，因此是否离线取决于你的模型和服务配置。
 
-不需要润色时，在 **Writing style** 选择 **verbatim**：普通 Dictate 仅使用 ASR，无需配置或运行文本 API。API 不可用时，普通听写保留未润色原文并提示；翻译、编辑和问答返回错误并保留原始转写供复制/重试，不把失败输出自动当作成功结果写入。
+默认写作风格就是 **verbatim**：普通 Dictate 仅使用 ASR，无需配置或运行文本 API。需要润色时在 **Writing style** 改选 clean 等风格，这些风格会调用文本 API。API 不可用时，普通听写保留未润色原文并提示；翻译、编辑和问答返回错误并保留原始转写供复制/重试，不把失败输出自动当作成功结果写入。
 
 ## 已实现的使用流程
 
@@ -58,10 +58,11 @@ API 使用 `GET <Base URL>/models` 和 `POST <Base URL>/chat/completions`。Base
 | 全局快捷键 | 自定义组合键、切换或按住录音、Esc 取消、非抢焦点浮动录音条 |
 | 输入设备 | 选择麦克风、实时音量、起止提示音、5 分钟录音上限 |
 | Dictionary | 识别词汇提示、指定拼写替换、CSV 导入导出、从历史纠错添加词条 |
-| Writing style | 全局及按应用设置 clean / verbatim / casual / formal / concise 风格和偏好 |
+| Writing style | 全局及按应用设置 clean / verbatim / casual / formal / concise 风格和偏好，默认 verbatim |
 | History | 搜索、模式过滤、原文对照、复制、纠错、导出、删除和保留期限 |
 | 音频保留 | 默认关闭；开启后可重试普通听写/翻译和导出 WAV；删除记录同步删除音频 |
-| 系统设置 | 隐私权限入口、开机启动、深色/浅色主题、模型预加载和卸载 |
+| 系统设置 | 隐私权限入口、开机启动、深色/浅色主题、界面语言、模型预加载和卸载 |
+| 界面语言 | 英文 / 简体中文，或跟随系统；切换即时生效。macOS 权限弹窗仍跟随系统语言 |
 
 功能参照 [Typeless Quickstart](https://www.typeless.com/help/quickstart)、[语音编辑及问答](https://www.typeless.com/help/quickstart/ask-anything)、[历史与词典](https://www.typeless.com/help/quickstart/history-and-dictionary) 的公开交互，核对日期 2026-09-17。此版本不承诺相同的模型质量；不包含云同步、移动端键盘、跨应用被动学习、联网搜索与自动网页操作。纠错学习只发生在用户明确保存的词条上。
 

@@ -24,7 +24,7 @@ enum TextInsertionError: LocalizedError {
     case secureField
 
     var errorDescription: String? {
-        "Password and secure fields cannot be used for voice typing."
+        L("sys.secureField")
     }
 }
 
@@ -45,7 +45,7 @@ final class AudioCaptureSink: @unchecked Sendable {
         guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                          sampleRate: 16_000, channels: 1, interleaved: false),
               let converter = AVAudioConverter(from: input, to: format) else {
-            throw SystemServiceError.unavailable("The microphone's audio format is not supported.")
+            throw SystemServiceError.unavailable(L("sys.audioFormat"))
         }
         self.format = format
         self.converter = converter
@@ -157,7 +157,7 @@ final class AudioRecorder: ObservableObject {
 
     func start(deviceUID: String, onPCM: (@Sendable (Data) -> Void)? = nil) async throws {
         guard engine == nil, !isStarting else {
-            throw SystemServiceError.unavailable("Recording is already in progress.")
+            throw SystemServiceError.unavailable(L("sys.recording"))
         }
         isStarting = true
         let currentGeneration = UUID()
@@ -172,7 +172,7 @@ final class AudioRecorder: ObservableObject {
         try Task.checkCancellation()
         guard generation == currentGeneration else { throw CancellationError() }
         guard authorized else {
-            throw SystemServiceError.unavailable("Enable Microphone access for OmniTyper in System Settings → Privacy & Security.")
+            throw SystemServiceError.unavailable(L("sys.micPermission"))
         }
 
         let engine = AVAudioEngine()
@@ -181,18 +181,18 @@ final class AudioRecorder: ObservableObject {
             guard var device = Self.inputDevices().first(where: {
                 Self.stringProperty($0, selector: kAudioDevicePropertyDeviceUID) == deviceUID
             }), let unit = input.audioUnit else {
-                throw SystemServiceError.unavailable("The selected microphone is no longer connected. Choose another microphone.")
+                throw SystemServiceError.unavailable(L("sys.micGone"))
             }
             let result = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice,
                                              kAudioUnitScope_Global, 0, &device,
                                              UInt32(MemoryLayout<AudioDeviceID>.size))
             guard result == noErr else {
-                throw SystemServiceError.unavailable("Could not select this microphone (audio error \(result)).")
+                throw SystemServiceError.unavailable(L("sys.micAudioError", String(result)))
             }
         }
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw SystemServiceError.unavailable("The microphone has no available audio input.")
+            throw SystemServiceError.unavailable(L("sys.micNoInput"))
         }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("OmniTyper-\(UUID().uuidString).wav")
@@ -218,7 +218,7 @@ final class AudioRecorder: ObservableObject {
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { _ in
-            sink.fail(SystemServiceError.unavailable("The microphone configuration changed. Please record again."))
+            sink.fail(SystemServiceError.unavailable(L("sys.micChanged")))
         }
         let started = ProcessInfo.processInfo.systemUptime
         meterTask = Task { [weak self] in
@@ -233,7 +233,7 @@ final class AudioRecorder: ObservableObject {
 
     func stop() throws -> URL {
         guard let url = outputURL else {
-            throw SystemServiceError.unavailable("No recording is in progress.")
+            throw SystemServiceError.unavailable(L("sys.noRecording"))
         }
         let sink = self.sink
         releaseAudio()
@@ -478,22 +478,22 @@ enum TextInsertion {
 
     static func capture() throws -> InsertionTarget {
         guard isTrusted else {
-            throw SystemServiceError.unavailable("Enable Accessibility access to insert text into other applications.")
+            throw SystemServiceError.unavailable(L("sys.axPermission"))
         }
         guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
-            throw SystemServiceError.unavailable("Focus a text field in another application before recording.")
+            throw SystemServiceError.unavailable(L("sys.focusField"))
         }
         let element = try focusedElement()
         var pid: pid_t = 0
         guard AXUIElementGetPid(element, &pid) == .success, pid == app.processIdentifier else {
-            throw SystemServiceError.unavailable("The focused application changed. Please try again.")
+            throw SystemServiceError.unavailable(L("sys.appChanged"))
         }
         try rejectSecure(element)
         let role = attribute(element, kAXRoleAttribute) as? String ?? ""
         guard [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(role)
                 || (attribute(element, "AXEditable") as? NSNumber)?.boolValue == true else {
-            throw SystemServiceError.unavailable("Focus an editable text field. Your result can still be copied.")
+            throw SystemServiceError.unavailable(L("sys.focusEditable"))
         }
         let range = try selectionRange(element)
         let selectedText = try selectedText(element, range: range)
@@ -514,7 +514,7 @@ enum TextInsertion {
            settable.boolValue {
             let result = AXUIElementSetAttributeValue(target.element, kAXSelectedTextAttribute as CFString, text as CFString)
             guard result == .success else {
-                throw SystemServiceError.unavailable("This application could not replace the selected text. Copy the result instead.")
+                throw SystemServiceError.unavailable(L("sys.replaceFailed"))
             }
             return
         }
@@ -525,19 +525,19 @@ enum TextInsertion {
             let copy = NSPasteboardItem()
             for type in item.types {
                 guard let data = item.data(forType: type) else {
-                    throw SystemServiceError.unavailable("The current clipboard cannot be preserved. Copy the result to paste manually.")
+                    throw SystemServiceError.unavailable(L("sys.clipboardKeep"))
                 }
                 copy.setData(data, forType: type)
             }
             return copy
         }
         guard clipboard.changeCount == originalCount else {
-            throw SystemServiceError.unavailable("The clipboard changed. Copy the result to paste it manually.")
+            throw SystemServiceError.unavailable(L("sys.clipboardChanged"))
         }
         guard let source = CGEventSource(stateID: .privateState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
-            throw SystemServiceError.unavailable("Could not create the paste keyboard event.")
+            throw SystemServiceError.unavailable(L("sys.pasteEvent"))
         }
         try validate(target)
         try Task.checkCancellation()
@@ -548,7 +548,7 @@ enum TextInsertion {
                 clipboard.clearContents()
                 if !snapshot.isEmpty { clipboard.writeObjects(snapshot) }
             }
-            throw SystemServiceError.unavailable("Could not place the result on the clipboard.")
+            throw SystemServiceError.unavailable(L("sys.clipboardWrite"))
         }
         let ownedCount = clipboard.changeCount
         defer {
@@ -576,11 +576,11 @@ enum TextInsertion {
     private static func validate(_ target: InsertionTarget) throws {
         guard isTrusted, !target.application.isTerminated,
               NSWorkspace.shared.frontmostApplication?.processIdentifier == target.application.processIdentifier else {
-            throw SystemServiceError.unavailable("The destination application changed. Your result is ready to copy.")
+            throw SystemServiceError.unavailable(L("sys.destChanged"))
         }
         let focused = try focusedElement()
         guard CFEqual(focused, target.element) else {
-            throw SystemServiceError.unavailable("The focused field changed. Your result is ready to copy.")
+            throw SystemServiceError.unavailable(L("sys.fieldChanged"))
         }
         try rejectSecure(focused)
         let window = elementAttribute(focused, kAXWindowAttribute)
@@ -588,12 +588,12 @@ enum TextInsertion {
               (window == nil && target.window == nil) || (window != nil && target.window != nil && CFEqual(window!, target.window!)),
               window.flatMap({ attribute($0, kAXTitleAttribute) as? String }) == target.windowTitle,
               window.flatMap({ attribute($0, kAXDocumentAttribute) as? String }) == target.document else {
-            throw SystemServiceError.unavailable("The destination content changed. Your result is ready to copy.")
+            throw SystemServiceError.unavailable(L("sys.contentChanged"))
         }
         let range = try selectionRange(focused)
         guard range.location == target.range.location, range.length == target.range.length,
               try selectedText(focused, range: range) == target.selectedText else {
-            throw SystemServiceError.unavailable("The cursor or selection changed. Your result is ready to copy.")
+            throw SystemServiceError.unavailable(L("sys.cursorChanged"))
         }
     }
 
@@ -602,7 +602,7 @@ enum TextInsertion {
         AXUIElementSetMessagingTimeout(system, 1)
         guard let value = attribute(system, kAXFocusedUIElementAttribute),
               CFGetTypeID(value) == AXUIElementGetTypeID() else {
-            throw SystemServiceError.unavailable("The focused field is not accessible. Your result can still be copied.")
+            throw SystemServiceError.unavailable(L("sys.fieldOpaque"))
         }
         let element = value as! AXUIElement
         AXUIElementSetMessagingTimeout(element, 1)
@@ -627,13 +627,13 @@ enum TextInsertion {
     private static func selectionRange(_ element: AXUIElement) throws -> CFRange {
         guard let value = attribute(element, kAXSelectedTextRangeAttribute),
               CFGetTypeID(value) == AXValueGetTypeID() else {
-            throw SystemServiceError.unavailable("This field does not expose its cursor position. Your result can still be copied.")
+            throw SystemServiceError.unavailable(L("sys.noCursor"))
         }
         let axValue = value as! AXValue
         var range = CFRange()
         guard AXValueGetType(axValue) == .cfRange, AXValueGetValue(axValue, .cfRange, &range),
               range.location >= 0, range.length >= 0 else {
-            throw SystemServiceError.unavailable("This field has an unsupported selection. Your result can still be copied.")
+            throw SystemServiceError.unavailable(L("sys.badSelection"))
         }
         return range
     }
@@ -646,7 +646,7 @@ enum TextInsertion {
            range.length <= (value as NSString).length - range.location {
             return (value as NSString).substring(with: NSRange(location: range.location, length: range.length))
         }
-        throw SystemServiceError.unavailable("The selected text cannot be read. Your result can still be copied.")
+        throw SystemServiceError.unavailable(L("sys.selectionRead"))
     }
 
     private static func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
