@@ -28,10 +28,15 @@ def main():
                     "Samantha",
                     "-o",
                     str(source),
-                    "The quick brown fox jumps over the lazy dog. "
-                    "Please send the report tomorrow. We are testing live speech recognition. "
-                    "Words should appear on the screen while I am still speaking. "
-                    "The final transcript should include this last sentence.",
+                    " ".join(
+                        [
+                            "The quick brown fox jumps over the lazy dog.",
+                            "Please send the report tomorrow.",
+                            "We are testing live speech recognition.",
+                            "Words should appear on the screen while I am still speaking.",
+                            "The final transcript should include this last sentence.",
+                        ]
+                    ),
                 ],
                 check=True,
             )

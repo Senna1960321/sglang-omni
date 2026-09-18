@@ -544,6 +544,8 @@ def main():
     try:
         serve(sys.stdin.buffer, protocol, worker)
     except (BrokenPipeError, KeyboardInterrupt):
+        # Normal shutdown: the app closed the pipe or the user interrupted.
+        # `finally` still releases the models and the native server.
         pass
     finally:
         worker.close()

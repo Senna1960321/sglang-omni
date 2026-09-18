@@ -56,6 +56,7 @@ async def handle(socket):
                     )
                 )
     except ConnectionClosed:
+        # The client under test disconnects mid-stream on purpose.
         pass
 
 
