@@ -472,6 +472,33 @@ struct InsertionTarget {
 enum TextInsertion {
     static var isTrusted: Bool { AXIsProcessTrusted() }
 
+    private static var activationObserver: NSObjectProtocol?
+    private static var enabledProcesses: Set<pid_t> = []
+
+    /// Chromium builds its accessibility tree only once a client asks for it, so
+    /// until then an Electron app reports no editable focused element and
+    /// dictation silently falls back to the clipboard. Asking on activation
+    /// gives the tree time to appear before a recording starts, and costs
+    /// nothing in apps that do not implement the attribute.
+    static func enableAccessibilityInHostedApps() {
+        guard activationObserver == nil else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        activationObserver = center.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
+                                                object: nil, queue: .main) { note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            MainActor.assumeIsolated { requestManualAccessibility(app.processIdentifier) }
+        }
+        if let app = NSWorkspace.shared.frontmostApplication { requestManualAccessibility(app.processIdentifier) }
+    }
+
+    private static func requestManualAccessibility(_ pid: pid_t) {
+        guard isTrusted, pid != ProcessInfo.processInfo.processIdentifier,
+              enabledProcesses.insert(pid).inserted else { return }
+        let application = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(application, 1)
+        AXUIElementSetAttributeValue(application, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+    }
+
     static func requestPermission() {
         AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
     }
@@ -484,7 +511,8 @@ enum TextInsertion {
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
             throw SystemServiceError.unavailable(L("sys.focusField"))
         }
-        let element = try focusedElement()
+        requestManualAccessibility(app.processIdentifier)
+        let element = try focusedElement(of: app.processIdentifier)
         var pid: pid_t = 0
         guard AXUIElementGetPid(element, &pid) == .success, pid == app.processIdentifier else {
             throw SystemServiceError.unavailable(L("sys.appChanged"))
@@ -578,7 +606,7 @@ enum TextInsertion {
               NSWorkspace.shared.frontmostApplication?.processIdentifier == target.application.processIdentifier else {
             throw SystemServiceError.unavailable(L("sys.destChanged"))
         }
-        let focused = try focusedElement()
+        let focused = try focusedElement(of: target.application.processIdentifier)
         guard CFEqual(focused, target.element) else {
             throw SystemServiceError.unavailable(L("sys.fieldChanged"))
         }
@@ -597,16 +625,22 @@ enum TextInsertion {
         }
     }
 
-    private static func focusedElement() throws -> AXUIElement {
-        let system = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(system, 1)
-        guard let value = attribute(system, kAXFocusedUIElementAttribute),
-              CFGetTypeID(value) == AXUIElementGetTypeID() else {
-            throw SystemServiceError.unavailable(L("sys.fieldOpaque"))
+    /// Asks the application before the system-wide element. Chromium answers the
+    /// application-level query with its focused text area while returning nothing
+    /// for the system-wide one, so Electron apps were unreachable through the
+    /// latter alone. The pid check in `capture()` still guards against the
+    /// frontmost app changing underneath us.
+    private static func focusedElement(of pid: pid_t) throws -> AXUIElement {
+        for source in [AXUIElementCreateApplication(pid), AXUIElementCreateSystemWide()] {
+            AXUIElementSetMessagingTimeout(source, 1)
+            if let value = attribute(source, kAXFocusedUIElementAttribute),
+               CFGetTypeID(value) == AXUIElementGetTypeID() {
+                let element = value as! AXUIElement
+                AXUIElementSetMessagingTimeout(element, 1)
+                return element
+            }
         }
-        let element = value as! AXUIElement
-        AXUIElementSetMessagingTimeout(element, 1)
-        return element
+        throw SystemServiceError.unavailable(L("sys.fieldOpaque"))
     }
 
     private static func rejectSecure(_ element: AXUIElement) throws {

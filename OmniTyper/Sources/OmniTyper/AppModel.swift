@@ -67,6 +67,7 @@ final class AppModel: ObservableObject {
             Task { @MainActor in self?.configureShortcut(preferences) }
         }
         configureShortcut(store.preferences)
+        TextInsertion.enableAccessibilityInHostedApps()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
