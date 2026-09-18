@@ -58,6 +58,7 @@ struct WorkerClientTests {
         }
         try #"""
         import json, os, sys, time
+        assert sys.dont_write_bytecode, "The worker must not modify the signed app bundle"
         serial = 0
         for line in sys.stdin:
             request = json.loads(line)

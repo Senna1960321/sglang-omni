@@ -122,6 +122,7 @@ final class WorkerClient: ObservableObject {
         var environment = ProcessInfo.processInfo.environment
         environment["PYTHONUNBUFFERED"] = "1"
         environment["PYTHONNOUSERSITE"] = "1"
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
         environment["TOKENIZERS_PARALLELISM"] = "false"
         child.environment = environment
         child.standardInput = stdin

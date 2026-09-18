@@ -10,6 +10,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources/backend"
 cp "$BIN_DIR/OmniTyper" "$APP_BUNDLE/Contents/MacOS/"
 cp "$APP_ROOT/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 cp "$APP_ROOT/backend/worker.py" "$APP_ROOT/backend/server.py" "$APP_BUNDLE/Contents/Resources/backend/"
+rm -rf "$APP_BUNDLE/Contents/Resources/backend/__pycache__"
 cp "$APP_ROOT/../LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
 for LPROJ in "$APP_ROOT"/Sources/OmniTyper/Resources/*.lproj; do
   # Note (Jiaxin Deng): Replace rather than merge, so a rebuild cannot nest directories or
