@@ -147,7 +147,13 @@ OmniTyper/.venv/bin/python OmniTyper/backend/smoke.py --base-url http://127.0.0.
 
 ## 故障定位
 
-- **没有快捷键响应**：在系统设置允许 OmniTyper 的辅助功能访问，再重启应用；开发中重新签名可能需要移除旧授权后重新添加。
+- **没有快捷键响应，或文字只进剪贴板不写入光标处**：这两个症状都来自缺少辅助功能权限。在系统设置允许 OmniTyper 的辅助功能访问后**重启应用**。
+
+  `build.sh` 默认使用 ad-hoc 签名，此时 app 的 designated requirement 就是它自己的 cdhash（`codesign -d -r- OmniTyper/dist/OmniTyper.app` 可以看到）。授权时这个 requirement 会被写进 TCC，**可执行文件一旦重新链接，cdhash 就会变**，TCC 中记录的 requirement 不再匹配，授权静默失效，而系统设置里的勾选**仍然显示为开启**，重新勾一遍也没有用。
+
+  重新链接发生在源码或资源有改动时，以及清掉 `.build` 后的干净构建之后；源码未改动的增量重建不会触发，cdhash 保持不变。也就是说更新到新版本后通常需要重新授权一次。处理方式是先用减号移除条目，或执行 `tccutil reset Accessibility org.sglang.OmniTyper`，再重新授权并重启应用。
+
+  经常重建的话，用一个固定的签名身份可以让授权跨重建保留：在「钥匙串访问 → 证书助理 → 创建证书」建一个自签名的代码签名证书（类型选 Code Signing），然后 `CODE_SIGN_IDENTITY="<证书名>" bash OmniTyper/scripts/build.sh`。这样 designated requirement 基于证书身份而不是 cdhash。
 - **麦克风不可用**：允许麦克风访问，确认设置中选定设备仍连接。系统默认设备会在下一次录音时读取。
 - **模型启动失败**：先运行 `scripts/setup.sh`；确认 Python 为 3.12、`ffmpeg@7` 可用，及 Hugging Face 可访问。代理环境需支持 HTTPX 的 SOCKS 依赖，setup 已包含。
 - **文本处理失败**：确认 Ollama / API 服务已启动，Base URL 包含正确的 `/v1` 前缀，模型名与服务端一致；远程服务检查 API Key 和 HTTPS。可清空自定义请求参数后重试。翻译/编辑失败不会自动写入原始识别结果，仍可复制原始转写。
