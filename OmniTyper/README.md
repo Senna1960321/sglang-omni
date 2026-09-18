@@ -195,6 +195,24 @@ ASR uses a pinned revision of `mlx-community/Qwen3-ASR-0.6B-4bit`, configured in
 depend on `mlx-audio`. No text model is bundled or loaded through MLX-LM in the
 worker; the configured API service controls the text model's lifecycle.
 
+Code ownership:
+
+| File | Responsibility |
+| --- | --- |
+| `Sources/OmniTyper/AppModel.swift` | Recording sessions, cancellation, retries, and insertion orchestration |
+| `Sources/OmniTyper/AudioRecorder.swift` | Microphone capture, PCM conversion, and temporary WAV ownership |
+| `Sources/OmniTyper/GlobalShortcut.swift` | Keyboard event tap and held-key state |
+| `Sources/OmniTyper/TextInsertion.swift` | Accessibility, destination checks, and clipboard restoration |
+| `Sources/OmniTyper/ASRStream.swift` | Bounded WebSocket transport and transcript revisions |
+| `Sources/OmniTyper/WorkerClient.swift` | Worker process, JSON-lines framing, timeouts, and cancellation |
+| `Sources/OmniTyper/Store.swift` | Settings, history, dictionary, and retention |
+| `Sources/OmniTyper/Views.swift` | Main window, shared view components, and voice panel |
+| `Sources/OmniTyper/LibraryViews.swift` | History, dictionary, writing rules, and import/export |
+| `Sources/OmniTyper/PreferencesView.swift` | Settings and shortcut capture |
+| `backend/worker.py` | Private request validation and ASR/text-processing orchestration |
+| `backend/server.py` | Pinned model setup and ownership of the native ASR process group |
+| `backend/text_api.py` | Text prompts and bounded OpenAI-compatible HTTP requests |
+
 The ASR service stays loaded between recordings. Quitting, cancelling, or stopping
 the worker cleans up its service process group. Initial model preparation allows
 up to 30 minutes; ordinary worker requests allow up to 10 minutes. Text API
@@ -242,7 +260,8 @@ Diagnostics are available from Settings and stored at:
 The log records JSON events containing error codes, destination bundle IDs,
 insertion paths, permission status, and the app version. It excludes transcripts,
 selected text, field contents, window titles, and file paths. It is bounded to
-128 KiB, discarding older complete lines when necessary.
+128 KiB, discarding older complete lines when necessary. Individual events larger
+than the log limit are omitted.
 
 ## Development
 
@@ -272,8 +291,9 @@ OmniTyper/.venv/bin/python OmniTyper/backend/smoke.py --base-url http://127.0.0.
 ```
 
 Automated tests cover audio conversion, streaming, worker lifecycle and request
-validation, shortcut state, insertion-target validation, localization, history,
-dictionary handling, and data migration. Real microphone behavior, physical
+validation, shortcut state across repeated configuration, insertion-target
+validation, localization, byte-bounded JSON diagnostics, history, dictionary
+handling, and data migration. Real microphone behavior, physical
 shortcuts, permissions, and third-party input compatibility also require desktop
 acceptance testing.
 

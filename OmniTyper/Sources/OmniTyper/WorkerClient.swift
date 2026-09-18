@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Combine
-import Foundation
 import Darwin
+import Foundation
 
 struct WorkerFailure: LocalizedError {
     let message: String
@@ -11,12 +11,10 @@ struct WorkerFailure: LocalizedError {
 
 @MainActor
 final class WorkerClient: ObservableObject {
-    /// Resolved on read: this client is constructed before the store loads the
-    /// saved interface language.
+    // Note (Jiaxin Deng): Resolve the default after the store loads the saved language.
     @Published private(set) var statusText: String?
     var status: String { statusText ?? L("worker.notLoaded") }
-    /// Tracks whether `status` currently shows the ready state, which used to be
-    /// recovered by comparing the displayed string.
+
     private var showingReady = false
     @Published private(set) var isRunning = false
 
@@ -69,7 +67,7 @@ final class WorkerClient: ObservableObject {
                         guard let self, self.pending?.id == requestID else { return }
                         self.failAndStop(Failure("worker.timedOut"))
                     }
-                    // A full pipe must never block the UI, including a stuck worker.
+                    // Note (Codex): A blocked worker must not block the UI thread writing its pipe.
                     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                         do { try input.write(contentsOf: data) }
                         catch {
@@ -146,8 +144,7 @@ final class WorkerClient: ObservableObject {
             guard !data.isEmpty else { handle.readabilityHandler = nil; return }
             DispatchQueue.main.async {
                 guard let self, self.generation == workerGeneration else { return }
-                // Third-party model logs can echo prompts or audio paths. Keep
-                // diagnostics bounded without ever storing their raw contents.
+                // Note (Codex): Model logs may contain user content; record only their byte count.
                 Diagnostics.record("worker.stderr", ["bytes": String(data.count)])
             }
         }
@@ -160,8 +157,7 @@ final class WorkerClient: ObservableObject {
                 Diagnostics.record("worker.exited", ["status": String(code)])
                 if self.stdoutEnded { self.handleExit() }
                 else {
-                    // Allow the pipe's final response/EOF to reach the main
-                    // queue before treating a normal exit as a lost response.
+                    // Note (Codex): Process exit can arrive before the pipe's final response.
                     self.exitTask = Task { [weak self] in
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
                         guard !Task.isCancelled, let self, self.generation == workerGeneration else { return }
@@ -278,8 +274,7 @@ final class WorkerClient: ObservableObject {
         child.terminationHandler = nil
         if child.isRunning {
             child.terminate()
-            // The Python worker gets time to stop its owned native model server.
-            // Escalate only this still-running child, never other Python processes.
+            // Note (Codex): Allow the worker to stop its model server before killing this child.
             Task {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
                 if child.isRunning { Darwin.kill(child.processIdentifier, SIGKILL) }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import Foundation
 import Combine
+import Foundation
 
 enum VoiceMode: String, Codable, CaseIterable, Identifiable {
     case dictate, translate, edit, ask
@@ -57,7 +57,7 @@ struct TextAPISettings: Codable, Equatable {
 struct Preferences: Codable, Equatable {
     var pythonExecutable = ""
     var asrModel = "mlx-community/Qwen3-ASR-0.6B-4bit"
-    // Optional so libraries saved before API configuration continue to decode.
+    // Note (Codex): Optional fields preserve decoding of libraries saved before these settings existed.
     var textAPI: TextAPISettings?
     var textSettings: TextAPISettings {
         get { textAPI ?? TextAPISettings() }
@@ -77,13 +77,9 @@ struct Preferences: Codable, Equatable {
     var historyDays = 30 // 0 = forever
     var keepAudio = false
     var appearance = "system"
-    // Note (Jiaxin Deng): Optional so libraries saved before interface localization still
-    // decode; a non-optional key would fail every existing library. nil follows
-    // the system language.
+    // Note (Jiaxin Deng): nil follows the system language and keeps older libraries decodable.
     var uiLanguage: String?
-    // Note (Jiaxin Deng): Optional for the same reason. Records that Accessibility was
-    // granted at least once, so losing it later can be reported as the stale grant
-    // it is rather than as a first run.
+    // Note (Jiaxin Deng): Remember prior grants to distinguish invalidated permissions from first use.
     var accessibilityWasTrusted: Bool?
 
     static func combinedInstructions(_ defaults: String, _ app: String) throws -> String {
@@ -171,7 +167,7 @@ final class AppStore: ObservableObject {
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("OmniTyper", isDirectory: true)
         do {
-            // Move the previous app's library once; never replace an existing library.
+            // Note (Codex): Migration must not replace an existing OmniTyper library.
             let legacy = self.directory.deletingLastPathComponent().appendingPathComponent("OpenTypeless", isDirectory: true)
             if self.directory.lastPathComponent == "OmniTyper",
                !FileManager.default.fileExists(atPath: self.directory.path),
@@ -187,14 +183,14 @@ final class AppStore: ObservableObject {
                 rules = saved.rules; history = saved.history
             }
         } catch {
-            // Preserve unreadable user data. Never overwrite it with an empty library.
+            // Note (Codex): An unreadable library must never be overwritten with defaults.
             canSave = false
             storageError = L("error.libraryLoad", error.localizedDescription)
         }
         L10n.use(preferences.uiLanguage)
         loaded = true
         if canSave {
-            // Repair a saved interpreter path after the project/data directory rename.
+            // Note (Codex): A renamed checkout can invalidate the saved interpreter path.
             let previous = preferences.pythonExecutable
             let relocated = previous.replacingOccurrences(of: "/openTypeless/", with: "/OmniTyper/")
                 .replacingOccurrences(of: "/OpenTypeless/", with: "/OmniTyper/")
@@ -252,10 +248,7 @@ final class AppStore: ObservableObject {
         return FileManager.default.fileExists(atPath: path.path) ? path : nil
     }
 
-    /// Records why an insertion failed on an entry that was already saved. The
-    /// transcript is stored before insertion is attempted, and a failure that
-    /// happens in another app is otherwise invisible: the notice lands in a
-    /// window the user is not looking at.
+    // Note (Jiaxin Deng): History preserves insertion failures that occur while the app window is hidden.
     func note(_ warning: String, on id: UUID) {
         guard canSave, let index = history.firstIndex(where: { $0.id == id }) else { return }
         let existing = history[index].warning ?? ""
@@ -353,11 +346,7 @@ enum DictionaryCSV {
     }
 }
 
-/// A failure identified by its message key.
-///
-/// The key is what the diagnostics log records, so a report reads the same
-/// whatever language raised it, and the message resolves when it is shown
-/// rather than freezing at the language in force when it was thrown.
+/// Stable diagnostic code with a message resolved in the current interface language.
 struct Failure: LocalizedError {
     let code: String
     private let arguments: [String]

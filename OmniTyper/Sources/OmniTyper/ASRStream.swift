@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
 
-// Native Qwen3-ASR sends replacement hypotheses, including revisions to earlier
-// words. Only transcription.completed is authoritative enough to insert.
+// Note (Codex): Segment hypotheses replace earlier words; only transcription.completed may be inserted.
 struct TranscriptionPreview {
     private var segments: [Int: String] = [:]
     private var finalized: Set<Int> = []

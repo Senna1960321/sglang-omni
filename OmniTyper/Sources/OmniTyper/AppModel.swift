@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import AppKit
 import AVFoundation
+import AppKit
 import Combine
 import SwiftUI
 
@@ -26,9 +26,7 @@ final class AppModel: ObservableObject {
     private var sessionAPIKey = ""
     @Published var microphoneAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @Published var accessibilityAllowed = false
-    /// Accessibility was granted before and is not being applied now. An ad-hoc
-    /// signature ties the grant to the build, so an update silently invalidates
-    /// it while System Settings still shows the app as enabled.
+    // Note (Jiaxin Deng): Ad-hoc rebuilds can invalidate a grant still shown as enabled in System Settings.
     @Published private(set) var accessibilityGrantStale = false
     var showMainWindow: (() -> Void)?
     var showVoicePanel: (() -> Void)?
@@ -63,16 +61,15 @@ final class AppModel: ObservableObject {
                 self?.textAPIKey = ""
                 self?.textModels = []
             }
-            // Published emits before storage changes; use the supplied value for shortcut settings.
-            Task { @MainActor in self?.configureShortcut(preferences) }
+            // Note (Codex): Published emits before storage changes; use its value without queuing work past shutdown.
+            self?.configureShortcut(preferences)
         }
         configureShortcut(store.preferences)
         Diagnostics.record("app.start", [
             "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
             "language": store.preferences.uiLanguage ?? "system",
             "style": store.preferences.style,
-            // Note (Jiaxin Deng): Whether an endpoint is set, never which one, so the log
-            // stays free of a host the user may not want to share.
+            // Note (Jiaxin Deng): Do not log the endpoint; it can identify a private host.
             "textAPI": String(!store.preferences.textSettings.model.isEmpty),
         ])
         TextInsertion.enableAccessibilityInHostedApps()
@@ -112,8 +109,7 @@ final class AppModel: ObservableObject {
         let previous = accessibilityAllowed
         let trusted = TextInsertion.isTrusted
         let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        // Note (Jiaxin Deng): Published values have no equality check, so the one-second
-        // timer would otherwise redraw every view twice a second forever.
+        // Note (Jiaxin Deng): Unchanged Published assignments still redraw views on every permission poll.
         if accessibilityAllowed != trusted || microphoneAllowed != microphone {
             Diagnostics.record("permission", ["accessibility": String(trusted), "microphone": String(microphone)])
         }
@@ -154,9 +150,7 @@ final class AppModel: ObservableObject {
             showMainWindow?()
             return
         } catch {
-            // Note (Jiaxin Deng): Unsupported controls still allow a copyable transcript, but
-            // a missing Accessibility grant is the usual cause and the only one the
-            // user can act on, so report that instead of blaming the field.
+            // Note (Jiaxin Deng): Keep copy-only dictation available and distinguish missing permissions from opaque fields.
             notice = accessibilityAllowed ? L("notice.fieldNotAccessible")
                 : accessibilityGrantStale ? L("home.permissions.axStale") : L("sys.axPermission")
             Diagnostics.record("capture.failed", ["reason": Diagnostics.code(of: error),
@@ -407,6 +401,7 @@ final class AppModel: ObservableObject {
     }
 
     func shutdown() {
+        preferencesSubscription?.cancel(); preferencesSubscription = nil
         cancel(); shortcut.stop(); timer?.invalidate()
         textAPIKey = ""; sessionAPIKey = ""
         discardRetryRecording()

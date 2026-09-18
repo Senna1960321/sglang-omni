@@ -19,6 +19,12 @@ struct GlobalShortcutTests {
                 down.flags = flags
                 #expect(shortcut.receive(keyCode == 63 ? .flagsChanged : .keyDown, event: down))
 
+                // Note (Codex): Preference updates must not release an unchanged held shortcut.
+                shortcut.start(keyCode: keyCode, modifiers: keyCode == 63 ? 0 : flags.rawValue, hold: true,
+                               onStart: { callbacks.append("start") }, onStop: { callbacks.append("stop") },
+                               onCancel: { callbacks.append("cancel") })
+                #expect(shortcut.pressed)
+
                 // Note (Codex): The consumed event is absent from session state while the physical key remains held.
                 for _ in 0..<20 {
                     shortcut.pollForRelease(keyState: { state, key in state == .hidSystemState && key == keyCode },

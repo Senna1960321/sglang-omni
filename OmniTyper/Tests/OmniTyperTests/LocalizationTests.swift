@@ -67,15 +67,20 @@ struct LocalizationTests {
         let url = try #require(Diagnostics.fileURL)
         #expect(url.path.hasPrefix(FileManager.default.temporaryDirectory.path),
                 "a test run must never append to the real log")
-        Diagnostics.record("test.start", ["note": "quote\" and \\ and\nnewline"])
-        for index in 0..<4_000 {
-            Diagnostics.record("test.fill", ["index": String(index)])
+        Diagnostics.record("test.start", ["note\"\n": "quote\" and \\ and\nnewline"])
+        let escaped = try String(contentsOf: url, encoding: .utf8).split(separator: "\n").last
+        let event = try JSONSerialization.jsonObject(with: Data(try #require(escaped).utf8)) as? [String: String]
+        #expect(event?["note\"\n"] == "quote\" and \\ and\nnewline")
+        for index in 0..<100 {
+            Diagnostics.record("test.fill", ["index": String(index), "note": String(repeating: "界🐎", count: 600)])
         }
+        Diagnostics.record("test.oversized", ["note": String(repeating: "界", count: 60_000)])
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.utf8.count <= 128 * 1024, "an unbounded log eventually stops being attachable")
         // Note (Jiaxin Deng): A half line would stop the file being parseable line by line.
         for line in text.split(separator: "\n") {
             #expect(line.hasPrefix("{") && line.hasSuffix("}"), "trimming must cut on a line boundary")
+            #expect(try JSONSerialization.jsonObject(with: Data(line.utf8)) is [String: String])
         }
         #expect(!text.contains("\nnewline"), "a raw newline would break the one-event-per-line shape")
     }
