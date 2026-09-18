@@ -250,6 +250,16 @@ final class AppStore: ObservableObject {
         return FileManager.default.fileExists(atPath: path.path) ? path : nil
     }
 
+    /// Records why an insertion failed on an entry that was already saved. The
+    /// transcript is stored before insertion is attempted, and a failure that
+    /// happens in another app is otherwise invisible: the notice lands in a
+    /// window the user is not looking at.
+    func note(_ warning: String, on id: UUID) {
+        guard canSave, let index = history.firstIndex(where: { $0.id == id }) else { return }
+        let existing = history[index].warning ?? ""
+        history[index].warning = existing.isEmpty ? warning : existing + " " + warning
+    }
+
     func delete(_ ids: Set<UUID>) {
         for entry in history where ids.contains(entry.id) {
             if let url = audioURL(for: entry) { try? FileManager.default.removeItem(at: url) }

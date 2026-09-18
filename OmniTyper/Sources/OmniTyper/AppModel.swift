@@ -287,6 +287,7 @@ final class AppModel: ObservableObject {
                             if notice.isEmpty { notice = L("notice.inserted", capturedTarget.applicationName) }
                         } catch {
                             notice = L("notice.readyToCopy", error.localizedDescription)
+                            store.note(error.localizedDescription, on: entry.id)
                             showMainWindow?()
                         }
                     } else {
