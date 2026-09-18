@@ -80,6 +80,9 @@ struct Preferences: Codable, Equatable {
     // Optional so libraries saved before interface localization continue to
     // decode; nil follows the system language.
     var uiLanguage: String?
+    // Optional for the same reason. Records that Accessibility was granted at
+    // least once, so losing it later can be reported as the stale grant it is.
+    var accessibilityWasTrusted: Bool?
 
     static func combinedInstructions(_ defaults: String, _ app: String) throws -> String {
         guard [defaults, app].allSatisfy({ $0.unicodeScalars.count <= 1000 && !$0.contains("\0") }) else {

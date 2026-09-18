@@ -135,6 +135,7 @@
 "home.title" = "Say it. Make it yours.";
 "home.subtitle" = "Speak in any app. Let your Mac take care of the words.";
 "home.permissions.title" = "Make yourself at home";
+"home.permissions.axStale" = "Accessibility was granted before and has stopped applying. An update changes this build's signature, which invalidates the grant while System Settings still shows it enabled. Remove OmniTyper under Privacy & Security > Accessibility, or run tccutil reset Accessibility org.sglang.OmniTyper, then grant it again and restart OmniTyper.";
 "home.permissions.body" = "Two macOS permissions connect your voice to wherever you write.";
 "home.permissions.mic" = "Hear you only while recording";
 "home.permissions.ax" = "Use the shortcut and insert at your cursor";

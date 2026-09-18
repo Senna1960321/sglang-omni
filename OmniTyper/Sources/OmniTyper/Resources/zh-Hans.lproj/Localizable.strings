@@ -135,6 +135,7 @@
 "home.title" = "说出来，它就是你的。";
 "home.subtitle" = "在任何应用里说话，剩下的交给你的 Mac。";
 "home.permissions.title" = "先完成两项授权";
+"home.permissions.axStale" = "之前授予的辅助功能权限已失效。更新会改变这次构建的签名，授权随之作废，但系统设置里仍显示为已开启。请在「隐私与安全性 → 辅助功能」中移除 OmniTyper，或执行 tccutil reset Accessibility org.sglang.OmniTyper，然后重新授权并重启 OmniTyper。";
 "home.permissions.body" = "两项 macOS 权限，把你的声音接到任何你写字的地方。";
 "home.permissions.mic" = "仅在录音时收听";
 "home.permissions.ax" = "使用快捷键并在光标处写入";

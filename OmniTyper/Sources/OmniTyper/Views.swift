@@ -148,6 +148,10 @@ struct HomeView: View {
                         Text(L("home.permissions.body")).font(.system(size: 12)).foregroundStyle(.secondary)
                         permission(L("settings.microphone"), subtitle: L("home.permissions.mic"), ready: model.microphoneAllowed, action: model.requestMicrophone)
                         permission(L("settings.accessibility"), subtitle: L("home.permissions.ax"), ready: model.accessibilityAllowed, action: model.requestAccessibility)
+                        if model.accessibilityGrantStale {
+                            Text(L("home.permissions.axStale")).font(.system(size: 11)).foregroundStyle(.orange)
+                                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
             }

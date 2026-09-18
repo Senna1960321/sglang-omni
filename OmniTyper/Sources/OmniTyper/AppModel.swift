@@ -26,6 +26,10 @@ final class AppModel: ObservableObject {
     private var sessionAPIKey = ""
     @Published var microphoneAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @Published var accessibilityAllowed = false
+    /// Accessibility was granted before and is not being applied now. An ad-hoc
+    /// signature ties the grant to the build, so an update silently invalidates
+    /// it while System Settings still shows the app as enabled.
+    @Published private(set) var accessibilityGrantStale = false
     var showMainWindow: (() -> Void)?
     var showVoicePanel: (() -> Void)?
     var hideVoicePanel: (() -> Void)?
@@ -103,6 +107,13 @@ final class AppModel: ObservableObject {
         // otherwise redraw every view twice a second forever.
         if accessibilityAllowed != trusted { accessibilityAllowed = trusted }
         if microphoneAllowed != microphone { microphoneAllowed = microphone }
+        if trusted {
+            if store.preferences.accessibilityWasTrusted != true { store.preferences.accessibilityWasTrusted = true }
+            if accessibilityGrantStale { accessibilityGrantStale = false }
+        } else {
+            let stale = store.preferences.accessibilityWasTrusted == true
+            if accessibilityGrantStale != stale { accessibilityGrantStale = stale }
+        }
         if trusted && !previous { configureShortcut(store.preferences) }
     }
 
@@ -134,7 +145,8 @@ final class AppModel: ObservableObject {
             // Unsupported controls still allow a copyable transcript, but a missing
             // Accessibility grant is the usual cause and is actionable, so report
             // that instead of blaming the field.
-            notice = accessibilityAllowed ? L("notice.fieldNotAccessible") : L("sys.axPermission")
+            notice = accessibilityAllowed ? L("notice.fieldNotAccessible")
+                : accessibilityGrantStale ? L("home.permissions.axStale") : L("sys.axPermission")
         }
         if mode == .edit && (target?.selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
             error = L("error.editNeedsSelection")
