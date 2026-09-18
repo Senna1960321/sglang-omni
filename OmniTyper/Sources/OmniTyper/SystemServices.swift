@@ -11,16 +11,6 @@ struct MicrophoneDevice: Identifiable, Hashable {
     let name: String
 }
 
-enum SystemServiceError: LocalizedError {
-    case unavailable(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .unavailable(let message): return message
-        }
-    }
-}
-
 enum TextInsertionError: LocalizedError {
     case secureField
 
@@ -46,7 +36,7 @@ final class AudioCaptureSink: @unchecked Sendable {
         guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                          sampleRate: 16_000, channels: 1, interleaved: false),
               let converter = AVAudioConverter(from: input, to: format) else {
-            throw SystemServiceError.unavailable(L("sys.audioFormat"))
+            throw Failure("sys.audioFormat")
         }
         self.format = format
         self.converter = converter
@@ -158,7 +148,7 @@ final class AudioRecorder: ObservableObject {
 
     func start(deviceUID: String, onPCM: (@Sendable (Data) -> Void)? = nil) async throws {
         guard engine == nil, !isStarting else {
-            throw SystemServiceError.unavailable(L("sys.recording"))
+            throw Failure("sys.recording")
         }
         isStarting = true
         let currentGeneration = UUID()
@@ -173,7 +163,7 @@ final class AudioRecorder: ObservableObject {
         try Task.checkCancellation()
         guard generation == currentGeneration else { throw CancellationError() }
         guard authorized else {
-            throw SystemServiceError.unavailable(L("sys.micPermission"))
+            throw Failure("sys.micPermission")
         }
 
         let engine = AVAudioEngine()
@@ -182,18 +172,18 @@ final class AudioRecorder: ObservableObject {
             guard var device = Self.inputDevices().first(where: {
                 Self.stringProperty($0, selector: kAudioDevicePropertyDeviceUID) == deviceUID
             }), let unit = input.audioUnit else {
-                throw SystemServiceError.unavailable(L("sys.micGone"))
+                throw Failure("sys.micGone")
             }
             let result = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice,
                                              kAudioUnitScope_Global, 0, &device,
                                              UInt32(MemoryLayout<AudioDeviceID>.size))
             guard result == noErr else {
-                throw SystemServiceError.unavailable(L("sys.micAudioError", String(result)))
+                throw Failure("sys.micAudioError", String(result))
             }
         }
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw SystemServiceError.unavailable(L("sys.micNoInput"))
+            throw Failure("sys.micNoInput")
         }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("OmniTyper-\(UUID().uuidString).wav")
@@ -219,7 +209,7 @@ final class AudioRecorder: ObservableObject {
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { _ in
-            sink.fail(SystemServiceError.unavailable(L("sys.micChanged")))
+            sink.fail(Failure("sys.micChanged"))
         }
         let started = ProcessInfo.processInfo.systemUptime
         meterTask = Task { [weak self] in
@@ -234,7 +224,7 @@ final class AudioRecorder: ObservableObject {
 
     func stop() throws -> URL {
         guard let url = outputURL else {
-            throw SystemServiceError.unavailable(L("sys.noRecording"))
+            throw Failure("sys.noRecording")
         }
         let sink = self.sink
         releaseAudio()
@@ -506,23 +496,23 @@ enum TextInsertion {
 
     static func capture() throws -> InsertionTarget {
         guard isTrusted else {
-            throw SystemServiceError.unavailable(L("sys.axPermission"))
+            throw Failure("sys.axPermission")
         }
         guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
-            throw SystemServiceError.unavailable(L("sys.focusField"))
+            throw Failure("sys.focusField")
         }
         requestManualAccessibility(app.processIdentifier)
         let element = try focusedElement(of: app.processIdentifier)
         var pid: pid_t = 0
         guard AXUIElementGetPid(element, &pid) == .success, pid == app.processIdentifier else {
-            throw SystemServiceError.unavailable(L("sys.appChanged"))
+            throw Failure("sys.appChanged")
         }
         try rejectSecure(element)
         let role = attribute(element, kAXRoleAttribute) as? String ?? ""
         guard [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(role)
                 || (attribute(element, "AXEditable") as? NSNumber)?.boolValue == true else {
-            throw SystemServiceError.unavailable(L("sys.focusEditable"))
+            throw Failure("sys.focusEditable")
         }
         let range = try selectionRange(element)
         let selectedText = try selectedText(element, range: range)
@@ -548,8 +538,9 @@ enum TextInsertion {
            settable.boolValue {
             let result = AXUIElementSetAttributeValue(target.element, kAXSelectedTextAttribute as CFString, text as CFString)
             guard result == .success else {
-                throw SystemServiceError.unavailable(L("sys.replaceFailed"))
+                throw Failure("sys.replaceFailed")
             }
+            Diagnostics.record("insert.ok", ["destination": target.bundleID, "path": "direct"])
             return
         }
 
@@ -559,19 +550,19 @@ enum TextInsertion {
             let copy = NSPasteboardItem()
             for type in item.types {
                 guard let data = item.data(forType: type) else {
-                    throw SystemServiceError.unavailable(L("sys.clipboardKeep"))
+                    throw Failure("sys.clipboardKeep")
                 }
                 copy.setData(data, forType: type)
             }
             return copy
         }
         guard clipboard.changeCount == originalCount else {
-            throw SystemServiceError.unavailable(L("sys.clipboardChanged"))
+            throw Failure("sys.clipboardChanged")
         }
         guard let source = CGEventSource(stateID: .privateState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
-            throw SystemServiceError.unavailable(L("sys.pasteEvent"))
+            throw Failure("sys.pasteEvent")
         }
         try validate(target)
         try Task.checkCancellation()
@@ -582,7 +573,7 @@ enum TextInsertion {
                 clipboard.clearContents()
                 if !snapshot.isEmpty { clipboard.writeObjects(snapshot) }
             }
-            throw SystemServiceError.unavailable(L("sys.clipboardWrite"))
+            throw Failure("sys.clipboardWrite")
         }
         let ownedCount = clipboard.changeCount
         defer {
@@ -608,8 +599,9 @@ enum TextInsertion {
         // queued, and sending it twice would duplicate the text.
         if let before = lengthBeforePaste, let after = characterCount(target.element),
            after == before {
-            throw SystemServiceError.unavailable(L("sys.pasteIgnored"))
+            throw Failure("sys.pasteIgnored")
         }
+        Diagnostics.record("insert.ok", ["destination": target.bundleID, "path": "paste"])
     }
 
     /// Length in the units the accessibility API counts, or nil when the field
@@ -628,11 +620,11 @@ enum TextInsertion {
     private static func validate(_ target: InsertionTarget) throws {
         guard isTrusted, !target.application.isTerminated,
               NSWorkspace.shared.frontmostApplication?.processIdentifier == target.application.processIdentifier else {
-            throw SystemServiceError.unavailable(L("sys.destChanged"))
+            throw Failure("sys.destChanged")
         }
         let focused = try focusedElement(of: target.application.processIdentifier)
         guard CFEqual(focused, target.element) else {
-            throw SystemServiceError.unavailable(L("sys.fieldChanged"))
+            throw Failure("sys.fieldChanged")
         }
         try rejectSecure(focused)
         let window = elementAttribute(focused, kAXWindowAttribute)
@@ -640,12 +632,12 @@ enum TextInsertion {
               (window == nil && target.window == nil) || (window != nil && target.window != nil && CFEqual(window!, target.window!)),
               window.flatMap({ attribute($0, kAXTitleAttribute) as? String }) == target.windowTitle,
               window.flatMap({ attribute($0, kAXDocumentAttribute) as? String }) == target.document else {
-            throw SystemServiceError.unavailable(L("sys.contentChanged"))
+            throw Failure("sys.contentChanged")
         }
         let range = try selectionRange(focused)
         guard range.location == target.range.location, range.length == target.range.length,
               try selectedText(focused, range: range) == target.selectedText else {
-            throw SystemServiceError.unavailable(L("sys.cursorChanged"))
+            throw Failure("sys.cursorChanged")
         }
     }
 
@@ -664,7 +656,7 @@ enum TextInsertion {
                 return element
             }
         }
-        throw SystemServiceError.unavailable(L("sys.fieldOpaque"))
+        throw Failure("sys.fieldOpaque")
     }
 
     private static func rejectSecure(_ element: AXUIElement) throws {
@@ -685,13 +677,13 @@ enum TextInsertion {
     private static func selectionRange(_ element: AXUIElement) throws -> CFRange {
         guard let value = attribute(element, kAXSelectedTextRangeAttribute),
               CFGetTypeID(value) == AXValueGetTypeID() else {
-            throw SystemServiceError.unavailable(L("sys.noCursor"))
+            throw Failure("sys.noCursor")
         }
         let axValue = value as! AXValue
         var range = CFRange()
         guard AXValueGetType(axValue) == .cfRange, AXValueGetValue(axValue, .cfRange, &range),
               range.location >= 0, range.length >= 0 else {
-            throw SystemServiceError.unavailable(L("sys.badSelection"))
+            throw Failure("sys.badSelection")
         }
         return range
     }
@@ -704,7 +696,7 @@ enum TextInsertion {
            range.length <= (value as NSString).length - range.location {
             return (value as NSString).substring(with: NSRange(location: range.location, length: range.length))
         }
-        throw SystemServiceError.unavailable(L("sys.selectionRead"))
+        throw Failure("sys.selectionRead")
     }
 
     /// Chromium vends `ChromeAXNodeId` on every node it exposes, and

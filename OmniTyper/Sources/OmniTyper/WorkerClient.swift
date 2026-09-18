@@ -3,16 +3,6 @@ import Combine
 import Foundation
 import Darwin
 
-enum WorkerError: LocalizedError {
-    case unavailable(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .unavailable(let message): return message
-        }
-    }
-}
-
 struct WorkerFailure: LocalizedError {
     let message: String
     let rawText: String?
@@ -47,7 +37,6 @@ final class WorkerClient: ObservableObject {
     private var exitStatus: Int32?
     private var timeoutTask: Task<Void, Never>?
     private var exitTask: Task<Void, Never>?
-    private var diagnostics = ""
     private let maximumLineBytes = 1_048_576
 
     func request(_ payload: [String: Any], python: String) async throws -> [String: Any] {
@@ -56,19 +45,19 @@ final class WorkerClient: ObservableObject {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
                 do {
-                    guard pending == nil else { throw WorkerError.unavailable(L("worker.busy")) }
+                    guard pending == nil else { throw Failure("worker.busy") }
                     var message = payload
                     message["id"] = requestID
                     guard JSONSerialization.isValidJSONObject(message) else {
-                        throw WorkerError.unavailable(L("worker.badRequest"))
+                        throw Failure("worker.badRequest")
                     }
                     var data = try JSONSerialization.data(withJSONObject: message)
                     guard data.count < 256 * 1_024 else {
-                        throw WorkerError.unavailable(L("worker.tooLarge"))
+                        throw Failure("worker.tooLarge")
                     }
                     data.append(0x0A)
                     try ensureProcess(python: python)
-                    guard let input else { throw WorkerError.unavailable(L("worker.noInput")) }
+                    guard let input else { throw Failure("worker.noInput") }
                     pending = Pending(id: requestID, continuation: continuation)
                     statusText = payload["op"] as? String == "prepare" ? L("worker.preparing") : L("worker.processing")
                     showingReady = false
@@ -78,7 +67,7 @@ final class WorkerClient: ObservableObject {
                         do { try await Task.sleep(nanoseconds: seconds * 1_000_000_000) }
                         catch { return }
                         guard let self, self.pending?.id == requestID else { return }
-                        self.failAndStop(WorkerError.unavailable(L("worker.timedOut")))
+                        self.failAndStop(Failure("worker.timedOut"))
                     }
                     // A full pipe must never block the UI, including a stuck worker.
                     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -86,7 +75,7 @@ final class WorkerClient: ObservableObject {
                         catch {
                             DispatchQueue.main.async {
                                 guard let self, self.generation == workerGeneration, self.pending?.id == requestID else { return }
-                                self.failAndStop(WorkerError.unavailable(L("worker.notAccepting")))
+                                self.failAndStop(Failure("worker.notAccepting"))
                             }
                         }
                     }
@@ -121,7 +110,7 @@ final class WorkerClient: ObservableObject {
         guard let worker = [bundled, overridden].compactMap({ $0 }).first(where: {
             FileManager.default.isReadableFile(atPath: $0.path)
         }) else {
-            throw WorkerError.unavailable(L("worker.missing"))
+            throw Failure("worker.missing")
         }
         let child = Process()
         let stdin = Pipe()
@@ -158,7 +147,7 @@ final class WorkerClient: ObservableObject {
                 guard let self, self.generation == workerGeneration else { return }
                 // Third-party model logs can echo prompts or audio paths. Keep
                 // diagnostics bounded without ever storing their raw contents.
-                self.log("Worker stderr: \(data.count) bytes (content omitted for privacy)")
+                Diagnostics.record("worker.stderr", ["bytes": String(data.count)])
             }
         }
         child.terminationHandler = { [weak self] child in
@@ -167,7 +156,7 @@ final class WorkerClient: ObservableObject {
                 guard let self, self.generation == workerGeneration else { return }
                 self.exitStatus = code
                 self.isRunning = false
-                self.log("Worker exited with status \(code)")
+                Diagnostics.record("worker.exited", ["status": String(code)])
                 if self.stdoutEnded { self.handleExit() }
                 else {
                     // Allow the pipe's final response/EOF to reach the main
@@ -184,7 +173,7 @@ final class WorkerClient: ObservableObject {
         catch {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
-            throw WorkerError.unavailable(L("worker.pythonStart", executable.path))
+            throw Failure("worker.pythonStart", executable.path)
         }
         process = child
         input = stdin.fileHandleForWriting
@@ -192,7 +181,7 @@ final class WorkerClient: ObservableObject {
         errors = stderr.fileHandleForReading
         pythonPath = executable.path
         isRunning = true
-        log("Worker started")
+        Diagnostics.record("worker.started")
     }
 
     private func receive(_ data: Data) {
@@ -201,7 +190,7 @@ final class WorkerClient: ObservableObject {
             stdoutEnded = true
             if exitStatus != nil { handleExit() }
             else if pending != nil {
-                failAndStop(WorkerError.unavailable(L("worker.closed")))
+                failAndStop(Failure("worker.closed"))
             }
             return
         }
@@ -209,7 +198,7 @@ final class WorkerClient: ObservableObject {
         while let newline = stdoutBuffer.firstIndex(of: 0x0A) {
             let line = stdoutBuffer.prefix(upTo: newline)
             guard line.count <= maximumLineBytes else {
-                failAndStop(WorkerError.unavailable(L("worker.oversized")))
+                failAndStop(Failure("worker.oversized"))
                 return
             }
             let complete = Data(line)
@@ -217,7 +206,7 @@ final class WorkerClient: ObservableObject {
             if complete.isEmpty { continue }
             guard let message = (try? JSONSerialization.jsonObject(with: complete)) as? [String: Any],
                   let responseID = message["id"] as? String else {
-                failAndStop(WorkerError.unavailable(L("worker.invalid")))
+                failAndStop(Failure("worker.invalid"))
                 return
             }
             guard responseID == pending?.id else { continue }
@@ -234,12 +223,12 @@ final class WorkerClient: ObservableObject {
                                                   rawText: message["raw_text"] as? String)))
                 }
             } else {
-                failAndStop(WorkerError.unavailable(L("worker.incomplete")))
+                failAndStop(Failure("worker.incomplete"))
                 return
             }
         }
         if stdoutBuffer.count > maximumLineBytes {
-            failAndStop(WorkerError.unavailable(L("worker.oversized")))
+            failAndStop(Failure("worker.oversized"))
         }
     }
 
@@ -254,7 +243,7 @@ final class WorkerClient: ObservableObject {
     private func handleExit() {
         let code = exitStatus ?? -1
         if pending != nil {
-            finish(.failure(WorkerError.unavailable(L("worker.exited", String(code)))))
+            finish(.failure(Failure("worker.exited", String(code))))
             statusText = L("worker.stopped"); showingReady = false
         } else if showingReady { statusText = nil; showingReady = false }
         shutdown()
@@ -295,16 +284,16 @@ final class WorkerClient: ObservableObject {
                 if child.isRunning { Darwin.kill(child.processIdentifier, SIGKILL) }
             }
         }
-        log("Worker stopped")
+        Diagnostics.record("worker.stopped")
     }
 
     private func resolvePython(_ supplied: String) throws -> URL {
         let expanded = (supplied.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
-        guard !expanded.isEmpty else { throw WorkerError.unavailable(L("worker.choosePython")) }
+        guard !expanded.isEmpty else { throw Failure("worker.choosePython") }
         if expanded.contains("/") {
             let url = URL(fileURLWithPath: expanded)
             guard FileManager.default.isExecutableFile(atPath: url.path) else {
-                throw WorkerError.unavailable(L("worker.pythonNotExecutable", url.path))
+                throw Failure("worker.pythonNotExecutable", url.path)
             }
             return url
         }
@@ -313,17 +302,7 @@ final class WorkerClient: ObservableObject {
             let url = URL(fileURLWithPath: String(directory)).appendingPathComponent(expanded)
             if FileManager.default.isExecutableFile(atPath: url.path) { return url }
         }
-        throw WorkerError.unavailable(L("worker.pythonMissing", expanded))
+        throw Failure("worker.pythonMissing", expanded)
     }
 
-    private func log(_ message: String) {
-        diagnostics += "\(Date().ISO8601Format()) \(message)\n"
-        if diagnostics.utf8.count > 8_192 { diagnostics = String(diagnostics.suffix(4_096)) }
-        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else { return }
-        let directory = library.appendingPathComponent("Logs/OmniTyper", isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            try Data(diagnostics.utf8).write(to: directory.appendingPathComponent("worker.log"), options: .atomic)
-        } catch { /* Diagnostics must not interrupt dictation. */ }
-    }
 }

@@ -36,19 +36,19 @@ struct TextAPISettings: Codable, Equatable {
               let host = components.host, !host.isEmpty,
               components.user == nil, components.password == nil, components.query == nil, components.fragment == nil,
               components.port == nil || (1...65535).contains(components.port!) else {
-            throw AppError.message(L("error.baseURL"))
+            throw Failure("error.baseURL")
         }
         guard model.unicodeScalars.count <= 256, !model.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
               !requireModel || !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AppError.message(L("error.model"))
+            throw Failure("error.model")
         }
         guard apiKey.utf8.count <= 4096, apiKey.unicodeScalars.allSatisfy({ (33...126).contains($0.value) }) else {
-            throw AppError.message(L("error.apiKey"))
+            throw Failure("error.apiKey")
         }
         guard let data = optionsJSON.data(using: .utf8), data.count <= 8192,
               let options = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               Set(options.keys).isDisjoint(with: ["model", "messages", "stream"]) else {
-            throw AppError.message(L("error.options"))
+            throw Failure("error.options")
         }
         return ["text_api_url": url, "text_model": model, "text_api_key": apiKey, "text_api_options": options]
     }
@@ -86,11 +86,11 @@ struct Preferences: Codable, Equatable {
 
     static func combinedInstructions(_ defaults: String, _ app: String) throws -> String {
         guard [defaults, app].allSatisfy({ $0.unicodeScalars.count <= 1000 && !$0.contains("\0") }) else {
-            throw AppError.message(L("error.instructionsField"))
+            throw Failure("error.instructionsField")
         }
         let combined = [defaults, app].filter { !$0.isEmpty }.joined(separator: "\n")
         guard combined.unicodeScalars.count <= 2000 else {
-            throw AppError.message(L("error.instructionsCombined"))
+            throw Failure("error.instructionsCombined")
         }
         return combined
     }
@@ -324,7 +324,7 @@ final class AppStore: ObservableObject {
 
 enum DictionaryCSV {
     static func parse(_ text: String) throws -> [[String]] {
-        guard text.utf8.count <= 1_000_000 else { throw AppError.message(L("error.dictionaryTooLarge")) }
+        guard text.utf8.count <= 1_000_000 else { throw Failure("error.dictionaryTooLarge") }
         var rows: [[String]] = [], row: [String] = [], field = "", quoted = false, endedQuote = false
         let chars = Array(text.replacingOccurrences(of: "\r\n", with: "\n"))
         var index = 0
@@ -340,18 +340,32 @@ enum DictionaryCSV {
                 if ch == "\n" { rows.append(row); row = [] }
             } else if ch == "\"", field.isEmpty, !endedQuote { quoted = true }
             else {
-                guard !endedQuote, ch != "\"" else { throw AppError.message(L("error.csvQuoting")) }
+                guard !endedQuote, ch != "\"" else { throw Failure("error.csvQuoting") }
                 field.append(ch)
             }
             index += 1
         }
-        guard !quoted else { throw AppError.message(L("error.csvUnclosed")) }
+        guard !quoted else { throw Failure("error.csvUnclosed") }
         if !field.isEmpty || !row.isEmpty || endedQuote { row.append(field); rows.append(row) }
         return rows
     }
 }
 
-enum AppError: LocalizedError {
-    case message(String)
-    var errorDescription: String? { if case .message(let message) = self { return message }; return nil }
+/// A failure identified by its message key.
+///
+/// The key is what the diagnostics log records, so a report reads the same
+/// whatever language raised it, and the message resolves when it is shown
+/// rather than freezing at the language in force when it was thrown.
+struct Failure: LocalizedError {
+    let code: String
+    private let arguments: [String]
+
+    init(_ code: String, _ arguments: String...) {
+        self.code = code
+        self.arguments = arguments
+    }
+
+    var errorDescription: String? {
+        arguments.isEmpty ? L(code) : String(format: L10n.string(code), arguments: arguments)
+    }
 }

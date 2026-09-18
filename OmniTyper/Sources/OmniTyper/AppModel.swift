@@ -67,6 +67,13 @@ final class AppModel: ObservableObject {
             Task { @MainActor in self?.configureShortcut(preferences) }
         }
         configureShortcut(store.preferences)
+        Diagnostics.record("app.start", [
+            "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
+            "language": store.preferences.uiLanguage ?? "system",
+            "style": store.preferences.style,
+            // Whether an endpoint is set, never which one.
+            "textAPI": String(!store.preferences.textSettings.model.isEmpty),
+        ])
         TextInsertion.enableAccessibilityInHostedApps()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -106,6 +113,9 @@ final class AppModel: ObservableObject {
         let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         // Published values have no equality check, so the one-second timer would
         // otherwise redraw every view twice a second forever.
+        if accessibilityAllowed != trusted || microphoneAllowed != microphone {
+            Diagnostics.record("permission", ["accessibility": String(trusted), "microphone": String(microphone)])
+        }
         if accessibilityAllowed != trusted { accessibilityAllowed = trusted }
         if microphoneAllowed != microphone { microphoneAllowed = microphone }
         if trusted {
@@ -148,6 +158,8 @@ final class AppModel: ObservableObject {
             // that instead of blaming the field.
             notice = accessibilityAllowed ? L("notice.fieldNotAccessible")
                 : accessibilityGrantStale ? L("home.permissions.axStale") : L("sys.axPermission")
+            Diagnostics.record("capture.failed", ["reason": Diagnostics.code(of: error),
+                                                  "accessibility": String(accessibilityAllowed)])
         }
         if mode == .edit && (target?.selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
             error = L("error.editNeedsSelection")
@@ -212,11 +224,11 @@ final class AppModel: ObservableObject {
         let rule = store.rules.first { $0.bundleID == target?.bundleID }
         let instructions = try Preferences.combinedInstructions(preferences.instructions, rule?.instructions ?? "")
         guard store.dictionary.count <= 200, store.dictionary.allSatisfy(\.isValid) else {
-            throw AppError.message(L("error.dictionaryInvalid"))
+            throw Failure("error.dictionaryInvalid")
         }
         let selectedText = (mode == .edit || mode == .ask) ? (target?.selectedText ?? "") : ""
         guard selectedText.unicodeScalars.count <= 12_000, !selectedText.contains("\0") else {
-            throw AppError.message(L("error.selectionTooLong"))
+            throw Failure("error.selectionTooLong")
         }
         var request: [String: Any] = [
             "op": audio == nil ? "process" : "transcribe",
@@ -288,6 +300,8 @@ final class AppModel: ObservableObject {
                         } catch {
                             notice = L("notice.readyToCopy", error.localizedDescription)
                             store.note(error.localizedDescription, on: entry.id)
+                            Diagnostics.record("insert.failed", ["destination": capturedTarget.bundleID,
+                                                                 "reason": Diagnostics.code(of: error)])
                             showMainWindow?()
                         }
                     } else {
@@ -304,6 +318,7 @@ final class AppModel: ObservableObject {
                 retryRecording = recording
                 target = nil; phase = .idle; hideVoicePanel?()
                 self.error = error.localizedDescription
+                Diagnostics.record("dictation.failed", ["reason": Diagnostics.code(of: error)])
                 if let raw = (error as? WorkerFailure)?.rawText, !raw.isEmpty {
                     rawText = raw; resultText = raw
                     notice = L("notice.textFailed")

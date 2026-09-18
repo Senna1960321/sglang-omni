@@ -628,7 +628,13 @@ struct PreferencesView: View {
                     }.disabled(!store.preferences.saveHistory)
                     Toggle(L("settings.keepAudio"), isOn: $store.preferences.keepAudio).disabled(!store.preferences.saveHistory)
                     Text(L("settings.historyNote")).font(.caption).foregroundStyle(.secondary)
-                    Button(L("settings.openDataFolder")) { NSWorkspace.shared.open(store.directory) }
+                    HStack {
+                        Button(L("settings.openDataFolder")) { NSWorkspace.shared.open(store.directory) }
+                        if let logs = Diagnostics.directory {
+                            Button(L("settings.openLogs")) { NSWorkspace.shared.open(logs) }
+                        }
+                    }
+                    Text(L("settings.logsNote")).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Card {
@@ -682,7 +688,7 @@ private enum FileActions {
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size <= 1_000_000 else { throw AppError.message(L("error.dictionaryTooLarge")) }
+        guard size <= 1_000_000 else { throw Failure("error.dictionaryTooLarge") }
         return try String(contentsOf: url, encoding: .utf8)
     }
     static func exportHistory(_ entries: [HistoryEntry]) {

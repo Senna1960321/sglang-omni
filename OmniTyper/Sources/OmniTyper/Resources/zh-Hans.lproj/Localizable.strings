@@ -296,6 +296,8 @@
 "settings.retainForever" = "永久";
 "settings.keepAudio" = "保留音频以便重试和导出";
 "settings.historyNote" = "关闭历史会删除已保存的转写和音频；关闭音频保留会删除已保留的录音。最多保留 1,000 条转写。";
+"settings.openLogs" = "打开诊断日志";
+"settings.logsNote" = "日志只记录失败的环节和位置，不记录转写内容、选中文本或任何输入框的内容。反馈问题时可以附上它。";
 "settings.openDataFolder" = "打开本地数据文件夹";
 "settings.general" = "通用";
 "settings.openAtLogin" = "开机自动启动";

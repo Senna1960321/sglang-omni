@@ -59,6 +59,36 @@ struct LocalizationTests {
         #expect(L10n.string("nav.Home", in: "xx") == "Home")
     }
 
+    /// The log exists to be attached to a report, so it has to stay free of
+    /// anything the user would have to read it first to check, and it has to
+    /// stay small enough to attach.
+    @Test func theDiagnosticsLogStaysBoundedAndEscapesWhatItStores() throws {
+        let url = try #require(Diagnostics.fileURL)
+        #expect(url.path.hasPrefix(FileManager.default.temporaryDirectory.path),
+                "a test run must never append to the real log")
+        Diagnostics.record("test.start", ["note": "quote\" and \\ and\nnewline"])
+        for index in 0..<4_000 {
+            Diagnostics.record("test.fill", ["index": String(index)])
+        }
+        let text = try String(contentsOf: url, encoding: .utf8)
+        #expect(text.utf8.count <= 128 * 1024, "an unbounded log eventually stops being attachable")
+        // Every retained line has to survive trimming as a whole line.
+        for line in text.split(separator: "\n") {
+            #expect(line.hasPrefix("{") && line.hasSuffix("}"), "trimming must cut on a line boundary")
+        }
+        #expect(!text.contains("\nnewline"), "a raw newline would break the one-event-per-line shape")
+    }
+
+    /// A failure names itself the same way in every language, which is what makes
+    /// a log from a Chinese interface readable by someone reading English.
+    @Test func aFailureKeepsOneCodeAcrossLanguages() throws {
+        let failure = Failure("sys.axPermission")
+        #expect(failure.code == "sys.axPermission")
+        #expect(Diagnostics.code(of: failure) == "sys.axPermission")
+        #expect(Diagnostics.code(of: CancellationError()) == "unknown")
+        #expect(L10n.string("sys.axPermission", in: "en") != L10n.string("sys.axPermission", in: "zh-Hans"))
+    }
+
     /// Published properties have no equality check, so a permission poll that
     /// assigned unconditionally redrew every view once a second.
     @Test @MainActor func unchangedPermissionsDoNotRepublish() throws {

@@ -296,6 +296,8 @@
 "settings.retainForever" = "Forever";
 "settings.keepAudio" = "Keep audio for retry and export";
 "settings.historyNote" = "Turning history off deletes saved transcripts and audio. Turning audio retention off deletes retained recordings. At most 1,000 transcripts are kept.";
+"settings.openLogs" = "Open diagnostics log";
+"settings.logsNote" = "The log records what failed and where, never transcripts, selected text or the contents of any field. Attach it when reporting a problem.";
 "settings.openDataFolder" = "Open local data folder";
 "settings.general" = "General";
 "settings.openAtLogin" = "Open at login";
