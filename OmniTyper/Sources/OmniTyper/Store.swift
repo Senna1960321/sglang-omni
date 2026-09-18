@@ -36,7 +36,7 @@ struct TextAPISettings: Codable, Equatable {
               let host = components.host, !host.isEmpty,
               components.user == nil, components.password == nil, components.query == nil, components.fragment == nil,
               components.port == nil || (1...65535).contains(components.port!) else {
-            throw AppError.message("Enter an HTTP(S) API base URL without credentials, query, or fragment, such as http://127.0.0.1:11434/v1.")
+            throw AppError.message("Enter an HTTP(S) API base URL without credentials, query, or fragment, such as http://127.0.0.1:11434/v1, or use verbatim dictation for ASR only.")
         }
         guard model.unicodeScalars.count <= 256, !model.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
               !requireModel || !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -65,7 +65,7 @@ struct Preferences: Codable, Equatable {
     }
     var language = ""
     var targetLanguage = "English"
-    var style = "clean"
+    var style = "verbatim"
     var instructions = ""
     var microphoneUID = ""
     var shortcutKeyCode: UInt16 = 49

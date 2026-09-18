@@ -131,8 +131,12 @@ final class AppModel: ObservableObject {
             showMainWindow?()
             return
         } catch {
-            // Unsupported controls still allow a copyable transcript.
-            notice = "The current field is not accessible. Your result will be ready to copy."
+            // Unsupported controls still allow a copyable transcript, but a missing
+            // Accessibility grant is the usual cause and is actionable, so report
+            // that instead of blaming the field.
+            notice = accessibilityAllowed
+                ? "The current field is not accessible. Your result will be ready to copy."
+                : "Enable Accessibility access to insert text into other applications."
         }
         if mode == .edit && (target?.selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
             error = "Select the text you want to change in another app, then use the shortcut. Accessibility access is required."
