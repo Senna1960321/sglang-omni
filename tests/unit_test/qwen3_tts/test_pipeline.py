@@ -1587,6 +1587,22 @@ def test_qwen3_tts_reference_code_batcher_has_no_stream_for_cpu_device() -> None
         batcher.close()
 
 
+def test_qwen3_tts_reference_code_batcher_allocates_a_musa_stream(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created: list[object] = []
+    expected = object()
+    monkeypatch.setattr(
+        torch.cuda,
+        "Stream",
+        lambda *, device: created.append(device) or expected,
+    )
+
+    device = SimpleNamespace(type="musa")
+    assert qwen3_request_builders._new_cuda_encode_stream(device) is expected
+    assert created == [device]
+
+
 def test_qwen3_tts_reference_code_batcher_pads_to_whole_frames() -> None:
     shapes: list[tuple[int, ...]] = []
 
@@ -2098,9 +2114,7 @@ def test_qwen3_tts_predictor_graph_is_cuda_only(
         lambda: (_ for _ in ()).throw(AssertionError("must not inspect server args")),
     )
     talker = sglang_model.Qwen3TTSTalker.__new__(sglang_model.Qwen3TTSTalker)
-    talker.model = SimpleNamespace(
-        codec_embedding=SimpleNamespace(weight=torch.empty(1)),
-    )
+    talker._predictor_device = torch.empty(1).device
 
     assert sglang_model.Qwen3TTSTalker._resolve_predictor_graph_enabled(talker) is False
 
@@ -8037,7 +8051,9 @@ def test_qwen3_tts_scheduler_adopts_prepared_tensors_after_the_preprocessing_eve
         "record_stream",
         lambda tensor, stream: recorded.append((tensor, stream)),
     )
-    monkeypatch.setattr(torch.Tensor, "is_cuda", property(lambda tensor: True))
+    monkeypatch.setattr(
+        torch.Tensor, "device", property(lambda tensor: torch.device("cuda"))
+    )
 
     ready = object()
     embeds = torch.zeros((3, 4))
