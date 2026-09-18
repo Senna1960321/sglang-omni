@@ -5,10 +5,18 @@
 import base64
 import json
 import subprocess
+import sys
 import tempfile
 import time
 import wave
 from pathlib import Path
+
+# Note (Jiaxin Deng): Python prepends this script's directory, but not under
+# PYTHONSAFEPATH or -P, and the app spawns the worker with whatever environment
+# the user has. Without this the sibling import below fails at launch.
+_backend = str(Path(__file__).resolve().parent)
+if _backend not in sys.path:
+    sys.path.insert(0, _backend)
 
 from server import NativeASRServer
 from websockets.sync.client import connect

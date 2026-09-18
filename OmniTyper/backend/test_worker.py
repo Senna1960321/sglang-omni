@@ -3,6 +3,7 @@
 
 import io
 import json
+import os
 import signal
 import struct
 import subprocess
@@ -303,6 +304,25 @@ class WorkerTests(unittest.TestCase):
         replies = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual([item["ok"] for item in replies], [False, True])
         self.assertNotIn("torch", sys.modules)
+
+    def test_real_subprocess_survives_a_stripped_default_path(self):
+        # Note (Jiaxin Deng): PYTHONSAFEPATH drops sys.path[0], which is how the
+        # sibling import broke for a reporter whose environment set it. The app
+        # hands the worker the user's environment, so this has to hold there too.
+        environment = {**os.environ, "PYTHONSAFEPATH": "1"}
+        result = subprocess.run(
+            [sys.executable, str(Path(worker.__file__))],
+            input=json.dumps(request(style="verbatim")) + "\n",
+            text=True,
+            capture_output=True,
+            timeout=10,
+            env=environment,
+        )
+        self.assertNotIn("ModuleNotFoundError", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            [json.loads(line)["ok"] for line in result.stdout.splitlines()], [True]
+        )
 
     def test_silence_empty_and_bad_wav_skip_models(self):
         with tempfile.TemporaryDirectory() as directory:
