@@ -71,7 +71,8 @@ final class AppModel: ObservableObject {
             "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
             "language": store.preferences.uiLanguage ?? "system",
             "style": store.preferences.style,
-            // Whether an endpoint is set, never which one.
+            // Note (Jiaxin Deng): Whether an endpoint is set, never which one, so the log
+            // stays free of a host the user may not want to share.
             "textAPI": String(!store.preferences.textSettings.model.isEmpty),
         ])
         TextInsertion.enableAccessibilityInHostedApps()
@@ -111,8 +112,8 @@ final class AppModel: ObservableObject {
         let previous = accessibilityAllowed
         let trusted = TextInsertion.isTrusted
         let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        // Published values have no equality check, so the one-second timer would
-        // otherwise redraw every view twice a second forever.
+        // Note (Jiaxin Deng): Published values have no equality check, so the one-second
+        // timer would otherwise redraw every view twice a second forever.
         if accessibilityAllowed != trusted || microphoneAllowed != microphone {
             Diagnostics.record("permission", ["accessibility": String(trusted), "microphone": String(microphone)])
         }
@@ -153,9 +154,9 @@ final class AppModel: ObservableObject {
             showMainWindow?()
             return
         } catch {
-            // Unsupported controls still allow a copyable transcript, but a missing
-            // Accessibility grant is the usual cause and is actionable, so report
-            // that instead of blaming the field.
+            // Note (Jiaxin Deng): Unsupported controls still allow a copyable transcript, but
+            // a missing Accessibility grant is the usual cause and the only one the
+            // user can act on, so report that instead of blaming the field.
             notice = accessibilityAllowed ? L("notice.fieldNotAccessible")
                 : accessibilityGrantStale ? L("home.permissions.axStale") : L("sys.axPermission")
             Diagnostics.record("capture.failed", ["reason": Diagnostics.code(of: error),

@@ -42,7 +42,7 @@ def model_snapshot(model: str, revision: str) -> str:
         if all((Path(cached) / name).is_file() for name in required):
             return cached
     except LocalEntryNotFoundError:
-        # Not cached yet. Fall through to the online download below.
+        # Note (Jiaxin Deng): Not cached yet, so fall through to the online download below.
         pass
     return snapshot_download(
         model,
@@ -126,8 +126,8 @@ class NativeASRServer:
                             progress("SGLang-Omni MLX speech server is ready.")
                             return
                 except (urllib.error.URLError, TimeoutError, OSError):
-                    # Expected while the server boots. Keep polling until the
-                    # deadline passes or the process exits.
+                    # Note (Jiaxin Deng): Expected while the server boots, so keep polling
+                    # until the deadline passes or the process exits.
                     pass
                 if time.monotonic() >= next_progress:
                     progress("Waiting for the local speech model to finish loading…")
@@ -201,17 +201,17 @@ class NativeASRServer:
         try:
             os.killpg(process.pid, signal.SIGTERM)
         except ProcessLookupError:
-            # The group is already gone; teardown is idempotent.
+            # Note (Jiaxin Deng): The group is already gone, and teardown has to stay idempotent.
             pass
         try:
             process.wait(timeout=1.5)
         except subprocess.TimeoutExpired:
-            # Graceful exit did not finish in time. Fall through to SIGKILL.
+            # Note (Jiaxin Deng): Graceful exit did not finish in time, so fall through to SIGKILL.
             pass
         # Also reap stage descendants if the launcher exited before its children.
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
-            # SIGTERM already reaped the group, so there is nothing left to kill.
+            # Note (Jiaxin Deng): SIGTERM already reaped the group, so there is nothing to kill.
             pass
         process.wait(timeout=1)

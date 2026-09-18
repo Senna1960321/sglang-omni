@@ -77,11 +77,13 @@ struct Preferences: Codable, Equatable {
     var historyDays = 30 // 0 = forever
     var keepAudio = false
     var appearance = "system"
-    // Optional so libraries saved before interface localization continue to
-    // decode; nil follows the system language.
+    // Note (Jiaxin Deng): Optional so libraries saved before interface localization still
+    // decode; a non-optional key would fail every existing library. nil follows
+    // the system language.
     var uiLanguage: String?
-    // Optional for the same reason. Records that Accessibility was granted at
-    // least once, so losing it later can be reported as the stale grant it is.
+    // Note (Jiaxin Deng): Optional for the same reason. Records that Accessibility was
+    // granted at least once, so losing it later can be reported as the stale grant
+    // it is rather than as a first run.
     var accessibilityWasTrusted: Bool?
 
     static func combinedInstructions(_ defaults: String, _ app: String) throws -> String {

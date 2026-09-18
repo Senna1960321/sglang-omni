@@ -37,8 +37,8 @@ struct LocalizationTests {
                         "format specifiers differ for \(key) in \(language)")
             }
         }
-        // A backslash survives into a parsed value only when the table escaped it
-        // twice, which shows the user "\\n" where a line break was meant.
+        // Note (Jiaxin Deng): A backslash survives into a parsed value only when the table
+        // escaped it twice, which shows the user "\\n" where a line break was meant.
         for language in L10n.supported {
             for (key, value) in try Self.table(language) where value.contains("\\") {
                 Issue.record("\(language) \(key) contains a literal backslash: \(value)")
@@ -50,12 +50,13 @@ struct LocalizationTests {
     /// resolution L10n actually uses; if it regresses, every string silently
     /// degrades to its key and formatted strings drop their arguments.
     @Test func lookupResolvesThroughTheResolvedBundle() throws {
-        // Passes the language explicitly: constructing an AppStore rewrites the
-        // selected language, and other suites do that in parallel with this one.
+        // Note (Jiaxin Deng): Passes the language explicitly, because constructing an
+        // AppStore rewrites the selected language and other suites do that in
+        // parallel with this one.
         #expect(L10n.string("nav.Home", in: nil) == "Home")
         #expect(L10n.string("nav.Home", in: "zh-Hans") == "首页")
         #expect(String(format: L10n.string("notice.inserted", in: "zh-Hans"), "Safari").contains("Safari"))
-        // An unsupported or untranslated choice falls back instead of showing keys.
+        // Note (Jiaxin Deng): An unsupported choice has to fall back rather than show keys.
         #expect(L10n.string("nav.Home", in: "xx") == "Home")
     }
 
@@ -72,7 +73,7 @@ struct LocalizationTests {
         }
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.utf8.count <= 128 * 1024, "an unbounded log eventually stops being attachable")
-        // Every retained line has to survive trimming as a whole line.
+        // Note (Jiaxin Deng): A half line would stop the file being parseable line by line.
         for line in text.split(separator: "\n") {
             #expect(line.hasPrefix("{") && line.hasSuffix("}"), "trimming must cut on a line boundary")
         }

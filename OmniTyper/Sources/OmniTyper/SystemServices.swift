@@ -529,10 +529,10 @@ enum TextInsertion {
         try Task.checkCancellation()
         try validate(target)
         var settable = DarwinBoolean(false)
-        // A web-hosted field is skipped here on purpose: Chromium accepts an
-        // AXSelectedText write on a contenteditable, reports success and drops
-        // it, so the app believed it had typed while nothing arrived. Pasting is
-        // the only path that lands there.
+        // Note (Jiaxin Deng): A web-hosted field is skipped here on purpose. Chromium accepts
+        // an AXSelectedText write on a contenteditable, reports success and drops it,
+        // so the app believed it had typed while nothing arrived. Pasting is the only
+        // path that lands there.
         if !isWebHosted(target.element),
            AXUIElementIsAttributeSettable(target.element, kAXSelectedTextAttribute as CFString, &settable) == .success,
            settable.boolValue {
@@ -592,11 +592,11 @@ enum TextInsertion {
         // Once sent, paste cannot be revoked. Do not let cancellation restore the
         // old clipboard while the queued paste is still being consumed.
         await Task.detached { try? await Task.sleep(nanoseconds: 300_000_000) }.value
-        // A destination can ignore the keystroke without reporting anything, which
-        // is indistinguishable from success unless the field is asked. Reporting
-        // an unconfirmed paste is what keeps "it typed nothing and said nothing"
-        // from being a silent state. Nothing is retried: the paste may still be
-        // queued, and sending it twice would duplicate the text.
+        // Note (Jiaxin Deng): A destination can ignore the keystroke without reporting
+        // anything, which is indistinguishable from success unless the field is
+        // asked. Reporting an unconfirmed paste is what keeps "it typed nothing and
+        // said nothing" from being a silent state. Nothing is retried, because the
+        // paste may still be queued and sending it twice would duplicate the text.
         if let before = lengthBeforePaste, let after = characterCount(target.element),
            after == before {
             throw Failure("sys.pasteIgnored")
@@ -604,8 +604,9 @@ enum TextInsertion {
         Diagnostics.record("insert.ok", ["destination": target.bundleID, "path": "paste"])
     }
 
-    /// Length in the units the accessibility API counts, or nil when the field
-    /// does not report one.
+    /// Both sides of the paste comparison have to be measured the same way, so
+    /// this returns the accessibility API's own units, or nil when a field reports
+    /// no length and the comparison cannot be made at all.
     private static func characterCount(_ element: AXUIElement) -> Int? {
         if let count = attribute(element, "AXNumberOfCharacters") as? NSNumber { return count.intValue }
         if let value = attribute(element, kAXValueAttribute) as? String { return (value as NSString).length }

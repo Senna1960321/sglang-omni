@@ -656,8 +656,8 @@ struct PreferencesView: View {
             }
         }.onAppear {
             microphones = AudioRecorder.devices()
-            // SMAppService.status is a synchronous XPC round trip; a @State default
-            // expression would repeat it on every body pass.
+            // Note (Jiaxin Deng): SMAppService.status is a synchronous XPC round trip, and a
+            // @State default expression would repeat it on every body pass.
             login = SMAppService.mainApp.status == .enabled
         }
             .onDisappear { endCapture() }

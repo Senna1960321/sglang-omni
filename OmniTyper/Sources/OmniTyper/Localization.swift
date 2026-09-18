@@ -28,7 +28,8 @@ enum L10n {
         state.withLock { selected = resolved }
     }
 
-    /// Display name for a language, written in that language.
+    /// Written in the language it names, so someone who cannot read the current
+    /// interface language can still find their own in the picker.
     static func displayName(_ language: String) -> String {
         Locale(identifier: language).localizedString(forIdentifier: language)?.localizedCapitalized ?? language
     }
@@ -41,9 +42,10 @@ enum L10n {
 
     private static let resources: Bundle = {
         if Bundle.main.path(forResource: development, ofType: "lproj") != nil { return .main }
-        // SwiftPM writes the resources into a bundle beside the product that links
-        // them: next to the executable for `swift run`, next to the .xctest bundle
-        // for tests.
+        // Note (Jiaxin Deng): SwiftPM writes the resources into a bundle beside the product
+        // that links them, so the search has to follow the product rather than a
+        // fixed path: next to the executable for `swift run`, next to the .xctest
+        // bundle for tests.
         let name = "OmniTyper_OmniTyper.bundle"
         var directory = Bundle(for: Anchor.self).bundleURL
         for _ in 0..<3 {
@@ -74,9 +76,10 @@ enum L10n {
             let value = source.localizedString(forKey: key, value: missing, table: nil)
             return value == missing ? nil : value
         }
-        // An explicit choice wins; otherwise Bundle.main resolves the system's
-        // preferred localization. Either way an untranslated key falls back to
-        // the development language rather than showing the key itself.
+        // Note (Jiaxin Deng): An explicit choice wins; otherwise Bundle.main resolves the
+        // system's preferred localization. Either way an untranslated key falls back
+        // to the development language, because a raw key on screen is worse than a
+        // sentence in the wrong language.
         if let value = lookup(language.flatMap(bundle) ?? resources) { return value }
         if let value = lookup(bundle(development)) { return value }
         return key

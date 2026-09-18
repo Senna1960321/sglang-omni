@@ -12,7 +12,8 @@ cp "$APP_ROOT/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 cp "$APP_ROOT/backend/worker.py" "$APP_ROOT/backend/server.py" "$APP_BUNDLE/Contents/Resources/backend/"
 cp "$APP_ROOT/../LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
 for LPROJ in "$APP_ROOT"/Sources/OmniTyper/Resources/*.lproj; do
-  # Replace rather than merge so a rebuild cannot nest or keep stale files.
+  # Note (Jiaxin Deng): Replace rather than merge, so a rebuild cannot nest directories or
+  # keep a locale that was removed.
   rm -rf "$APP_BUNDLE/Contents/Resources/$(basename "$LPROJ")"
   cp -R "$LPROJ" "$APP_BUNDLE/Contents/Resources/"
 done

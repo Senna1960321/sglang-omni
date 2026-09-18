@@ -12,8 +12,7 @@ enum Diagnostics {
     private static let byteLimit = 128 * 1024
     private static let lock = NSLock()
 
-    /// Set to write somewhere else; otherwise the location follows how the code
-    /// is running.
+    /// Set to write somewhere else; otherwise see `directory`.
     nonisolated(unsafe) static var overrideDirectory: URL?
 
     private final class Anchor {}
@@ -37,8 +36,8 @@ enum Diagnostics {
 
     static var fileURL: URL? { directory?.appendingPathComponent("diagnostics.log") }
 
-    /// The stable identifier of a failure, or `unknown` for anything raised
-    /// outside the app's own vocabulary.
+    /// Anything raised outside the app's own vocabulary logs as `unknown` rather
+    /// than as a sentence, which would vary by language and by wording.
     static func code(of error: Error) -> String {
         (error as? Failure)?.code ?? "unknown"
     }
@@ -70,7 +69,7 @@ enum Diagnostics {
             }
             try Data(text.utf8).write(to: fileURL, options: .atomic)
         } catch {
-            // Diagnostics must never interrupt dictation.
+            // Note (Jiaxin Deng): Diagnostics must never interrupt dictation.
         }
     }
 
