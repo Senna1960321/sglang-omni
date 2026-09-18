@@ -50,6 +50,7 @@
 "sys.replaceFailed" = "This application could not replace the selected text. Copy the result instead.";
 "sys.clipboardKeep" = "The current clipboard cannot be preserved. Copy the result to paste manually.";
 "sys.clipboardChanged" = "The clipboard changed. Copy the result to paste it manually.";
+"sys.pasteIgnored" = "The destination did not accept the paste. Your result is ready to copy.";
 "sys.pasteEvent" = "Could not create the paste keyboard event.";
 "sys.clipboardWrite" = "Could not place the result on the clipboard.";
 "sys.destChanged" = "The destination application changed. Your result is ready to copy.";

@@ -50,6 +50,7 @@
 "sys.replaceFailed" = "该应用无法替换选中文本，请改用复制。";
 "sys.clipboardKeep" = "无法保留当前剪贴板内容，请复制结果后手动粘贴。";
 "sys.clipboardChanged" = "剪贴板内容已改变，请复制结果后手动粘贴。";
+"sys.pasteIgnored" = "目标应用没有接受粘贴。结果已就绪，可直接复制。";
 "sys.pasteEvent" = "无法创建粘贴按键事件。";
 "sys.clipboardWrite" = "无法将结果写入剪贴板。";
 "sys.destChanged" = "目标应用已切换。结果已就绪，可直接复制。";

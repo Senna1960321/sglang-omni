@@ -593,6 +593,7 @@ enum TextInsertion {
             }
         }
         try validate(target)
+        let lengthBeforePaste = characterCount(target.element)
         down.flags = .maskCommand
         up.flags = .maskCommand
         down.postToPid(target.application.processIdentifier)
@@ -600,6 +601,23 @@ enum TextInsertion {
         // Once sent, paste cannot be revoked. Do not let cancellation restore the
         // old clipboard while the queued paste is still being consumed.
         await Task.detached { try? await Task.sleep(nanoseconds: 300_000_000) }.value
+        // A destination can ignore the keystroke without reporting anything, which
+        // is indistinguishable from success unless the field is asked. Reporting
+        // an unconfirmed paste is what keeps "it typed nothing and said nothing"
+        // from being a silent state. Nothing is retried: the paste may still be
+        // queued, and sending it twice would duplicate the text.
+        if let before = lengthBeforePaste, let after = characterCount(target.element),
+           after == before {
+            throw SystemServiceError.unavailable(L("sys.pasteIgnored"))
+        }
+    }
+
+    /// Length in the units the accessibility API counts, or nil when the field
+    /// does not report one.
+    private static func characterCount(_ element: AXUIElement) -> Int? {
+        if let count = attribute(element, "AXNumberOfCharacters") as? NSNumber { return count.intValue }
+        if let value = attribute(element, kAXValueAttribute) as? String { return (value as NSString).length }
+        return nil
     }
 
     static func copy(_ text: String) {
