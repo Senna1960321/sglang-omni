@@ -539,7 +539,12 @@ enum TextInsertion {
         try Task.checkCancellation()
         try validate(target)
         var settable = DarwinBoolean(false)
-        if AXUIElementIsAttributeSettable(target.element, kAXSelectedTextAttribute as CFString, &settable) == .success,
+        // A web-hosted field is skipped here on purpose: Chromium accepts an
+        // AXSelectedText write on a contenteditable, reports success and drops
+        // it, so the app believed it had typed while nothing arrived. Pasting is
+        // the only path that lands there.
+        if !isWebHosted(target.element),
+           AXUIElementIsAttributeSettable(target.element, kAXSelectedTextAttribute as CFString, &settable) == .success,
            settable.boolValue {
             let result = AXUIElementSetAttributeValue(target.element, kAXSelectedTextAttribute as CFString, text as CFString)
             guard result == .success else {
@@ -682,6 +687,16 @@ enum TextInsertion {
             return (value as NSString).substring(with: NSRange(location: range.location, length: range.length))
         }
         throw SystemServiceError.unavailable(L("sys.selectionRead"))
+    }
+
+    /// Chromium vends `ChromeAXNodeId` on every node it exposes, and
+    /// `AXDOMIdentifier` alongside it, which is what separates a web field from
+    /// a native one.
+    private static func isWebHosted(_ element: AXUIElement) -> Bool {
+        var names: CFArray?
+        guard AXUIElementCopyAttributeNames(element, &names) == .success,
+              let list = names as? [String] else { return false }
+        return list.contains("ChromeAXNodeId") || list.contains("AXDOMIdentifier")
     }
 
     private static func attribute(_ element: AXUIElement, _ key: String) -> CFTypeRef? {
