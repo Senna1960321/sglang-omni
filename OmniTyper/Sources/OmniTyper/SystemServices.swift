@@ -296,7 +296,7 @@ final class GlobalShortcut {
     private var keyCode: UInt16 = 49
     private var modifiers: UInt64 = 0
     private var hold = false
-    private var pressed = false
+    private(set) var pressed = false
     private var capturedKey = false
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
@@ -346,15 +346,20 @@ final class GlobalShortcut {
                 guard !Task.isCancelled, let self else { break }
                 ticks += 1
                 if self.tap == nil && ticks % 10 == 0 { self.installTap() }
-                if self.pressed {
-                    let flags = self.matchingFlags(CGEventSource.flagsState(.combinedSessionState))
-                    let down = self.triggerModifier == 0
-                        ? CGEventSource.keyState(.combinedSessionState, key: self.keyCode)
-                        : flags & self.triggerModifier != 0
-                    if !down || flags != self.modifiers | self.triggerModifier { self.release() }
-                }
+                self.pollForRelease()
             }
         }
+    }
+
+    func pollForRelease(keyState: (CGEventSourceStateID, CGKeyCode) -> Bool = CGEventSource.keyState,
+                        flagsState: (CGEventSourceStateID) -> CGEventFlags = CGEventSource.flagsState) {
+        guard pressed else { return }
+        // Note (Codex): Consumed session events hide held keys; poll the physical state before our event tap.
+        let flags = matchingFlags(flagsState(.hidSystemState))
+        let down = triggerModifier == 0
+            ? keyState(.hidSystemState, keyCode)
+            : flags & triggerModifier != 0
+        if !down || flags != modifiers | triggerModifier { release() }
     }
 
     func stop() {
@@ -391,7 +396,7 @@ final class GlobalShortcut {
         CGEvent.tapEnable(tap: tap, enable: true)
     }
 
-    private func receive(_ type: CGEventType, event: CGEvent) -> Bool {
+    func receive(_ type: CGEventType, event: CGEvent) -> Bool {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             release()
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
