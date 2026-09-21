@@ -42,6 +42,7 @@ struct TextInsertionTests {
 
     @Test func unchangedCharacterCountReportsAnIgnoredPaste() {
         #expect(TextInsertion.pasteWasIgnored(before: 12, after: 12, inserted: 5, replaced: 0))
+        #expect(TextInsertion.pasteWasIgnored(before: 0, after: 0, inserted: 43, replaced: 0))
         #expect(!TextInsertion.pasteWasIgnored(before: 12, after: 17, inserted: 5, replaced: 0))
         // Note (Yifei Leng): Replacing a selection of equal length leaves the count unchanged on success.
         #expect(!TextInsertion.pasteWasIgnored(before: 12, after: 12, inserted: 5, replaced: 5))

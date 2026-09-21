@@ -180,8 +180,15 @@ enum TextInsertion {
         await Task.detached { try? await Task.sleep(nanoseconds: 800_000_000) }.value
         // Note (Jiaxin Deng): Report ignored pastes without retrying; a delayed paste could otherwise duplicate text.
         if let element = target.element, let range = target.range,
-           pasteWasIgnored(before: lengthBeforePaste, after: characterCount(element),
+           let before = lengthBeforePaste, let after = characterCount(element),
+           pasteWasIgnored(before: before, after: after,
                            inserted: (text as NSString).length, replaced: range.length) {
+            Diagnostics.record("insert.ignored", [
+                "destination": target.bundleID,
+                "before": String(before), "after": String(after),
+                "inserted": String((text as NSString).length),
+                "replaced": String(range.length),
+            ])
             throw Failure("sys.pasteIgnored")
         }
         Diagnostics.record("insert.ok", ["destination": target.bundleID,
